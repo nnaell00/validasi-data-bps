@@ -1,0 +1,83 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\User;
+use App\Models\ValidationProfile;
+use App\Services\DummyDataGenerator;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Hash;
+use Tests\TestCase;
+
+class BatchUploadAndPreviewTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_user_can_download_dummy_excel_template(): void
+    {
+        $user = User::create([
+            'name' => 'Petugas BPS Test',
+            'email' => 'petugas.test@bps.go.id',
+            'role' => 'petugas',
+            'password' => Hash::make('password'),
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($user)->get('/batches/dummy-template');
+
+        $response->assertStatus(200);
+        $response->assertHeader('content-disposition', 'attachment; filename=data_kepegawaian_dummy_bps_purwakarta.xlsx');
+    }
+
+    public function test_petugas_can_upload_excel_and_see_raw_preview(): void
+    {
+        $user = User::create([
+            'name' => 'Petugas BPS Test',
+            'email' => 'petugas.test@bps.go.id',
+            'role' => 'petugas',
+            'password' => Hash::make('password'),
+            'is_active' => true,
+        ]);
+
+        $profile = ValidationProfile::create([
+            'name' => 'Data Kepegawaian',
+            'slug' => 'data-kepegawaian',
+            'is_active' => true,
+        ]);
+
+        // Hasilkan file dummy Excel nyata menggunakan DummyDataGenerator
+        $generator = new DummyDataGenerator();
+        $dummyPath = $generator->generate();
+
+        $uploadedFile = new UploadedFile(
+            $dummyPath,
+            'test_data_kepegawaian.xlsx',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            null,
+            true
+        );
+
+        $response = $this->actingAs($user)->post('/batches/upload', [
+            'validation_profile_id' => $profile->id,
+            'file' => $uploadedFile,
+        ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('validation_batches', [
+            'file_name' => 'test_data_kepegawaian.xlsx',
+            'status' => 'uploaded',
+        ]);
+
+        $this->assertDatabaseCount('batch_rows', 15);
+
+        // Akses halaman preview
+        $batch = \App\Models\ValidationBatch::first();
+        $previewResponse = $this->actingAs($user)->get("/batches/{$batch->id}/preview");
+
+        $previewResponse->assertStatus(200);
+        $previewResponse->assertSee('Pratinjau Data Mentah');
+        $previewResponse->assertSee('Ahmad Fauzi');
+        $previewResponse->assertSee('Jalankan Validasi Sekarang');
+    }
+}
