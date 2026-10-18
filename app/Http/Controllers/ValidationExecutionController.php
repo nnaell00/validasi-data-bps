@@ -10,6 +10,8 @@ use App\Services\ValidationEngine;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
 class ValidationExecutionController extends Controller
@@ -19,6 +21,8 @@ class ValidationExecutionController extends Controller
      */
     public function execute(ValidationBatch $batch, ValidationEngine $engine): RedirectResponse
     {
+        Gate::authorize('update', $batch);
+
         $batch->load(['profile.activeRules', 'rows']);
         $profile = $batch->profile;
 
@@ -95,6 +99,8 @@ class ValidationExecutionController extends Controller
      */
     public function results(Request $request, ValidationBatch $batch): View
     {
+        Gate::authorize('view', $batch);
+
         $batch->load(['profile', 'user']);
 
         $filter = $request->input('filter', 'all'); // all, anomalies_only, valid_only
@@ -133,6 +139,8 @@ class ValidationExecutionController extends Controller
      */
     public function editRow(ValidationBatch $batch, BatchRow $row): View
     {
+        Gate::authorize('view', $batch);
+
         if ($row->validation_batch_id !== $batch->id) {
             abort(404);
         }
@@ -154,53 +162,89 @@ class ValidationExecutionController extends Controller
      */
     public function updateRow(Request $request, ValidationBatch $batch, BatchRow $row): RedirectResponse
     {
+        Gate::authorize('update', $batch);
+
         if ($row->validation_batch_id !== $batch->id) {
             abort(404);
         }
 
-        $submittedData = $request->input('data', []);
-        $currentData = $row->current_data;
         $headers = $batch->headers ?? [];
-        $hasChanges = false;
+        $allowedColumns = implode(',', array_keys($headers));
+        $validated = $request->validate([
+            'data' => ['required', 'array:'.$allowedColumns],
+            'data.*' => ['nullable', 'string'],
+        ]);
+        $submittedData = $validated['data'];
+        $originalData = $row->original_data;
 
-        // Bandingkan nilai lama vs nilai baru untuk audit log
-        foreach ($submittedData as $colIndex => $newValue) {
-            $colIndex = (int) $colIndex;
-            $oldValue = $currentData[$colIndex] ?? null;
-            $trimmedNew = is_string($newValue) ? trim($newValue) : $newValue;
-            $colName = $headers[$colIndex] ?? "Kolom #{$colIndex}";
+        foreach (ValidationBatch::PRESERVED_SOURCE_COLUMN_INDICES as $columnIndex) {
+            if (! array_key_exists($columnIndex, $submittedData)) {
+                continue;
+            }
 
-            if ((string) $oldValue !== (string) $trimmedNew) {
+            $submittedValue = is_string($submittedData[$columnIndex])
+                ? trim($submittedData[$columnIndex])
+                : $submittedData[$columnIndex];
+
+            if ((string) ($originalData[$columnIndex] ?? '') !== (string) ($submittedValue ?? '')) {
+                return back()->withErrors([
+                    "data.{$columnIndex}" => 'Kolom sumber tidak boleh diubah.',
+                ])->withInput();
+            }
+        }
+
+        $hasChanges = DB::transaction(function () use ($batch, $headers, $row, $submittedData): bool {
+            $currentData = $row->current_data;
+            $hasChanges = false;
+
+            foreach ($submittedData as $columnIndex => $newValue) {
+                $columnIndex = (int) $columnIndex;
+
+                if (in_array($columnIndex, ValidationBatch::PRESERVED_SOURCE_COLUMN_INDICES, true)) {
+                    continue;
+                }
+
+                $oldValue = $currentData[$columnIndex] ?? null;
+                $trimmedNew = is_string($newValue) ? trim($newValue) : $newValue;
+                $columnName = $headers[$columnIndex] ?? "Kolom #{$columnIndex}";
+
+                if ((string) $oldValue === (string) $trimmedNew) {
+                    continue;
+                }
+
                 $hasChanges = true;
-                $currentData[$colIndex] = $trimmedNew;
+                $currentData[$columnIndex] = $trimmedNew;
 
-                // Catat ke audit trail (Aturan khusus TA: Simpan riwayat perubahan)
                 AuditLog::create([
                     'validation_batch_id' => $batch->id,
                     'batch_row_id' => $row->id,
                     'user_id' => Auth::id(),
-                    'column_name' => $colName,
-                    'old_value' => (string) $oldValue,
-                    'new_value' => (string) $trimmedNew,
+                    'column_name' => $columnName,
+                    'old_value' => $oldValue === null ? null : (string) $oldValue,
+                    'new_value' => $trimmedNew === null ? null : (string) $trimmedNew,
                     'action' => 'correction',
-                    'notes' => "Koreksi baris #{$row->row_number} oleh " . Auth::user()->name,
+                    'notes' => "Koreksi baris #{$row->row_number} oleh ".Auth::user()->name,
                 ]);
 
-                // Tandai anomali di kolom ini telah diselesaikan
                 RowAnomaly::where('batch_row_id', $row->id)
-                    ->where('column_index', $colIndex)
+                    ->where('column_index', $columnIndex)
                     ->update([
                         'is_resolved' => true,
-                        'corrected_value' => (string) $trimmedNew,
+                        'corrected_value' => $trimmedNew === null ? null : (string) $trimmedNew,
                     ]);
             }
-        }
+
+            if ($hasChanges) {
+                $row->update([
+                    'current_data' => $currentData,
+                    'is_corrected' => true,
+                ]);
+            }
+
+            return $hasChanges;
+        });
 
         if ($hasChanges) {
-            $row->update([
-                'current_data' => $currentData,
-                'is_corrected' => true,
-            ]);
 
             return redirect()->route('validation.results', $batch)
                 ->with('success', "Baris ke-{$row->row_number} berhasil dikoreksi dan dicatat ke riwayat audit.");
@@ -215,6 +259,8 @@ class ValidationExecutionController extends Controller
      */
     public function revalidate(ValidationBatch $batch, ValidationEngine $engine): RedirectResponse
     {
+        Gate::authorize('update', $batch);
+
         $batch->load(['profile.activeRules', 'rows']);
         $profile = $batch->profile;
 

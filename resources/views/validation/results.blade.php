@@ -23,6 +23,15 @@
         </div>
 
         <div class="flex items-center space-x-3 flex-wrap gap-y-2">
+            <a href="{{ route('validation.export.data', $batch) }}" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors">
+                Ekspor Data Excel
+            </a>
+            <a href="{{ route('validation.export.report', $batch) }}" class="px-3.5 py-2 bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold rounded-lg transition-colors">
+                Ekspor Laporan 2 Sheet
+            </a>
+            <a href="{{ route('validation.audit', $batch) }}" class="px-3.5 py-2 bg-violet-100 hover:bg-violet-200 text-violet-800 text-xs font-semibold rounded-lg transition-colors">
+                Audit Trail
+            </a>
             <form action="{{ route('validation.revalidate', $batch) }}" method="POST" class="inline">
                 @csrf
                 <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-xs hover:shadow transition-colors flex items-center space-x-1.5">

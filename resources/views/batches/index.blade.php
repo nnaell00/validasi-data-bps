@@ -85,9 +85,18 @@
                                 <a href="{{ route('batches.preview', $batch) }}" class="inline-flex items-center text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline">
                                     Pratinjau Data
                                 </a>
+                                <a href="{{ route('validation.audit', $batch) }}" class="inline-flex items-center text-xs font-semibold text-violet-600 hover:text-violet-800 hover:underline ml-2">
+                                    Audit Trail
+                                </a>
                                 @if($batch->status === 'validated' || $batch->status === 'completed')
                                     <a href="{{ route('validation.results', $batch) }}" class="inline-flex items-center text-xs font-bold text-emerald-600 hover:text-emerald-800 hover:underline ml-2">
                                         Hasil Validasi &rarr;
+                                    </a>
+                                    <a href="{{ route('validation.export.data', $batch) }}" class="inline-flex items-center text-xs font-semibold text-emerald-700 hover:text-emerald-900 hover:underline ml-2">
+                                        Ekspor Data
+                                    </a>
+                                    <a href="{{ route('validation.export.report', $batch) }}" class="inline-flex items-center text-xs font-semibold text-teal-700 hover:text-teal-900 hover:underline ml-2">
+                                        Ekspor Laporan
                                     </a>
                                 @endif
                             </td>

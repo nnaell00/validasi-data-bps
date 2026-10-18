@@ -16,6 +16,112 @@ class ValidationExecutionAndCorrectionTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_correction_rolls_back_when_audit_trail_cannot_be_written(): void
+    {
+        $petugas = User::create([
+            'name' => 'Petugas Uji',
+            'email' => 'petugas-transaction@bps.go.id',
+            'role' => 'petugas',
+            'password' => Hash::make('password'),
+            'is_active' => true,
+        ]);
+        $profile = ValidationProfile::create([
+            'name' => 'Profil Uji',
+            'slug' => 'profil-transaksi',
+            'is_active' => true,
+        ]);
+        $batch = ValidationBatch::create([
+            'user_id' => $petugas->id,
+            'validation_profile_id' => $profile->id,
+            'file_name' => 'data_sintetis.xlsx',
+            'file_path' => 'synthetic/test.xlsx',
+            'total_rows' => 1,
+            'status' => 'validated',
+            'headers' => ['No.', 'Nama', 'NIP'],
+        ]);
+        $row = BatchRow::create([
+            'validation_batch_id' => $batch->id,
+            'row_index' => 0,
+            'row_number' => 1,
+            'original_data' => ['1', 'Pegawai Sintetis', '12345'],
+            'current_data' => ['1', 'Pegawai Sintetis', '12345'],
+        ]);
+        $auditAttempts = 0;
+        AuditLog::creating(static function () use (&$auditAttempts): void {
+            $auditAttempts++;
+
+            if ($auditAttempts === 2) {
+                throw new \RuntimeException('Simulasi kegagalan audit trail.');
+            }
+        });
+
+        $response = $this->actingAs($petugas)->put(route('validation.update-row', [$batch, $row]), [
+            'data' => ['1', 'Nama Pegawai Diperbaiki', '000123456789012345'],
+        ]);
+
+        $response->assertStatus(500);
+        $this->assertSame(['1', 'Pegawai Sintetis', '12345'], $row->refresh()->current_data);
+        $this->assertFalse($row->is_corrected);
+        $this->assertDatabaseMissing('audit_logs', [
+            'validation_batch_id' => $batch->id,
+            'batch_row_id' => $row->id,
+            'action' => 'correction',
+        ]);
+    }
+
+    public function test_correction_rejects_changes_to_the_three_preserved_source_columns(): void
+    {
+        $petugas = User::create([
+            'name' => 'Petugas Uji',
+            'email' => 'petugas-raw@bps.go.id',
+            'role' => 'petugas',
+            'password' => Hash::make('password'),
+            'is_active' => true,
+        ]);
+        $profile = ValidationProfile::create([
+            'name' => 'Profil Uji',
+            'slug' => 'profil-kolom-sumber',
+            'is_active' => true,
+        ]);
+        $headers = array_map(fn (int $index): string => "Kolom {$index}", range(0, 19));
+        $sourceData = array_map(fn (int $index): string => "nilai-{$index}", range(0, 19));
+        $sourceData[2] = '000123456789012345';
+        $sourceData[11] = '0000000000000001';
+        $batch = ValidationBatch::create([
+            'user_id' => $petugas->id,
+            'validation_profile_id' => $profile->id,
+            'file_name' => 'data_sintetis.xlsx',
+            'file_path' => 'synthetic/test.xlsx',
+            'total_rows' => 1,
+            'status' => 'validated',
+            'headers' => $headers,
+        ]);
+        $row = BatchRow::create([
+            'validation_batch_id' => $batch->id,
+            'row_index' => 0,
+            'row_number' => 1,
+            'original_data' => $sourceData,
+            'current_data' => $sourceData,
+        ]);
+        $editResponse = $this->actingAs($petugas)->get(route('validation.edit-row', [$batch, $row]));
+
+        $editResponse->assertOk();
+        $editResponse->assertSee('readonly', false);
+
+        $submittedData = $sourceData;
+        $submittedData[2] = '000987654321098765';
+        $submittedData[12] = 'nilai-diubah';
+        $response = $this->put(route('validation.update-row', [$batch, $row]), ['data' => $submittedData]);
+
+        $response->assertSessionHasErrors('data.12');
+        $this->assertSame($sourceData, $row->refresh()->current_data);
+        $this->assertDatabaseMissing('audit_logs', [
+            'validation_batch_id' => $batch->id,
+            'batch_row_id' => $row->id,
+            'action' => 'correction',
+        ]);
+    }
+
     public function test_execution_anomaly_detection_correction_and_revalidation(): void
     {
         $petugas = User::create([
@@ -101,7 +207,7 @@ class ValidationExecutionAndCorrectionTest extends TestCase
         // 3. Petugas Melakukan Koreksi pada baris ke-2
         $correctResponse = $this->actingAs($petugas)->put("/batches/{$batch->id}/rows/{$row2->id}", [
             'data' => [
-                0 => 2,
+                0 => '2',
                 1 => 'Siti Aminah',
                 2 => '199203152015022002', // NIP 18 digit yang benar
             ],

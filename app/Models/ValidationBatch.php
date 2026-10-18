@@ -11,6 +11,8 @@ class ValidationBatch extends Model
 {
     use HasFactory;
 
+    public const PRESERVED_SOURCE_COLUMN_INDICES = [12, 13, 14];
+
     protected $fillable = [
         'user_id',
         'validation_profile_id',

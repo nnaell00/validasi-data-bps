@@ -47,9 +47,9 @@
                 @foreach($batch->headers ?? [] as $colIndex => $headerName)
                     @php
                         $hasAnomaly = isset($anomaliesByColIndex[$colIndex]);
-                        $currentVal = $row->current_data[$colIndex] ?? '';
+                        $isRawCol = in_array((int) $colIndex, \App\Models\ValidationBatch::PRESERVED_SOURCE_COLUMN_INDICES, true);
+                        $currentVal = $isRawCol ? ($row->original_data[$colIndex] ?? '') : ($row->current_data[$colIndex] ?? '');
                         $originalVal = $row->original_data[$colIndex] ?? '';
-                        $isRawCol = in_array($headerName, ['Kolom_Raw_1', 'Kolom_Raw_2', 'Kolom_Raw_3']);
                     @endphp
 
                     <div class="p-3.5 rounded-xl border {{ $hasAnomaly ? 'border-rose-300 bg-rose-50/30 ring-1 ring-rose-200' : 'border-slate-200 bg-slate-50/50' }} transition-colors">
@@ -58,12 +58,12 @@
                                 [{{ $colIndex }}] {{ $headerName }}
                             </label>
 
-                            @if($hasAnomaly)
+                            @if($isRawCol)
+                                <span class="text-[10px] text-slate-500 italic">Kolom sumber (dikunci)</span>
+                            @elseif($hasAnomaly)
                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
                                     Anomali
                                 </span>
-                            @elseif($isRawCol)
-                                <span class="text-[10px] text-slate-400 italic">Kolom Raw</span>
                             @elseif($headerName === 'No. WA')
                                 <span class="text-[10px] text-emerald-600 font-medium">Opsional</span>
                             @endif
@@ -72,7 +72,8 @@
                         <!-- Input Nilai Terkini -->
                         <div>
                             <input type="text" id="col_{{ $colIndex }}" name="data[{{ $colIndex }}]" value="{{ old("data.{$colIndex}", $currentVal) }}"
-                                class="w-full px-3 py-2 text-xs font-mono bg-white border {{ $hasAnomaly ? 'border-rose-400 text-rose-900 focus:ring-rose-500' : 'border-slate-300 text-slate-800 focus:ring-blue-500' }} rounded-lg focus:outline-none focus:ring-2">
+                                {{ $isRawCol ? 'readonly' : '' }}
+                                class="w-full px-3 py-2 text-xs font-mono bg-white border {{ $hasAnomaly ? 'border-rose-400 text-rose-900 focus:ring-rose-500' : 'border-slate-300 text-slate-800 focus:ring-blue-500' }} rounded-lg focus:outline-none focus:ring-2 {{ $isRawCol ? 'bg-slate-100 cursor-not-allowed' : '' }}">
                         </div>
 
                         <!-- Pesan Anomali Jika Ada -->

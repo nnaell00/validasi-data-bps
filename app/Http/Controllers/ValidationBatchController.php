@@ -10,6 +10,7 @@ use App\Services\ExcelDataParser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -67,6 +68,7 @@ class ValidationBatchController extends Controller
 
         if (empty($parsed['rows'])) {
             Storage::disk('local')->delete($storedPath);
+
             return back()->with('error', 'File Excel kosong atau tidak memiliki baris data.');
         }
 
@@ -109,6 +111,8 @@ class ValidationBatchController extends Controller
      */
     public function preview(ValidationBatch $batch): View
     {
+        Gate::authorize('view', $batch);
+
         $batch->load(['profile', 'user']);
         $rows = $batch->rows()->paginate(15);
 
