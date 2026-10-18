@@ -55,13 +55,13 @@
     </div>
 
     <!-- Tabel Daftar Aturan Kolom -->
-    <div class="bg-white rounded-xl border border-slate-200/90 shadow-xs overflow-hidden">
+    <div class="app-card overflow-hidden">
         <div class="p-4 border-b border-slate-200 flex items-center justify-between">
             <h2 class="text-sm font-bold text-slate-800">Daftar Aturan Validasi per Kolom ({{ $profile->rules->count() }} Aturan)</h2>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200 text-xs text-left">
+        <div class="app-table-wrap">
+            <table class="app-table min-w-[1150px] text-left text-xs">
                 <thead class="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider">
                     <tr>
                         <th class="px-4 py-3">Pos.</th>

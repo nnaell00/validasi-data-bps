@@ -5,7 +5,7 @@
 @section('content')
 <div class="space-y-6">
     <!-- Header Halaman & Aksi Cepat -->
-    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-6 rounded-xl border border-slate-200/90 shadow-xs">
+    <div class="app-card flex flex-col gap-4 p-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
             <div class="flex items-center space-x-2 text-xs text-slate-500 mb-1">
                 <a href="{{ route('batches.index') }}" class="text-blue-600 hover:underline">&larr; Riwayat Validasi</a>
@@ -22,19 +22,19 @@
             </p>
         </div>
 
-        <div class="flex items-center space-x-3 flex-wrap gap-y-2">
-            <a href="{{ route('validation.export.data', $batch) }}" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors">
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{{ route('validation.export.data', $batch) }}" class="app-button-success text-xs">
                 Ekspor Data Excel
             </a>
-            <a href="{{ route('validation.export.report', $batch) }}" class="px-3.5 py-2 bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold rounded-lg transition-colors">
+            <a href="{{ route('validation.export.report', $batch) }}" class="app-button-primary bg-teal-700 hover:bg-teal-800 focus:ring-teal-700/20 text-xs">
                 Ekspor Laporan 2 Sheet
             </a>
-            <a href="{{ route('validation.audit', $batch) }}" class="px-3.5 py-2 bg-violet-100 hover:bg-violet-200 text-violet-800 text-xs font-semibold rounded-lg transition-colors">
+            <a href="{{ route('validation.audit', $batch) }}" class="app-button-secondary border-violet-200 bg-violet-50 text-xs text-violet-800 hover:bg-violet-100">
                 Audit Trail
             </a>
             <form action="{{ route('validation.revalidate', $batch) }}" method="POST" class="inline">
                 @csrf
-                <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-xs hover:shadow transition-colors flex items-center space-x-1.5">
+                <button type="submit" class="app-button-primary bg-indigo-700 hover:bg-indigo-800 focus:ring-indigo-700/20 text-xs">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
@@ -42,7 +42,7 @@
                 </button>
             </form>
 
-            <a href="{{ route('batches.preview', $batch) }}" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors">
+            <a href="{{ route('batches.preview', $batch) }}" class="app-button-secondary text-xs">
                 Pratinjau Asli
             </a>
         </div>
@@ -51,14 +51,14 @@
     <!-- Ringkasan Statistik Metrik Kualitas Data -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- 1. Total Baris -->
-        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+        <div class="app-card p-4">
             <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Baris</span>
             <div class="text-2xl font-black text-slate-800 mt-1">{{ $stats['total_rows'] }}</div>
             <span class="text-xs text-slate-500">Pegawai terdata</span>
         </div>
 
         <!-- 2. Data Bersih / Valid -->
-        <div class="bg-white p-4 rounded-xl border border-emerald-200 bg-emerald-50/20 shadow-xs">
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50/30 p-4">
             <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-700">Data Bersih (Valid)</span>
             <div class="text-2xl font-black text-emerald-600 mt-1">{{ $stats['valid_rows'] }}</div>
             <span class="text-xs text-emerald-600 font-medium">
@@ -67,14 +67,14 @@
         </div>
 
         <!-- 3. Baris Memuat Anomali -->
-        <div class="bg-white p-4 rounded-xl border border-amber-200 bg-amber-50/20 shadow-xs">
+        <div class="rounded-xl border border-amber-200 bg-amber-50/30 p-4">
             <span class="text-[11px] font-bold uppercase tracking-wider text-amber-700">Baris Anomali</span>
             <div class="text-2xl font-black text-amber-600 mt-1">{{ $stats['anomalous_rows'] }}</div>
             <span class="text-xs text-amber-700">Memerlukan koreksi</span>
         </div>
 
         <!-- 4. Total Kesalahan Anomali -->
-        <div class="bg-white p-4 rounded-xl border border-rose-200 bg-rose-50/20 shadow-xs">
+        <div class="rounded-xl border border-rose-200 bg-rose-50/30 p-4">
             <span class="text-[11px] font-bold uppercase tracking-wider text-rose-700">Total Anomali</span>
             <div class="text-2xl font-black text-rose-600 mt-1">{{ $stats['total_anomalies'] }}</div>
             <span class="text-xs text-rose-600">{{ $stats['total_corrected'] }} baris sudah diperbaiki</span>
@@ -82,7 +82,7 @@
     </div>
 
     <!-- Filter & Pencarian Baris -->
-    <div class="bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div class="app-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
         <!-- Tab Filter Status -->
         <div class="flex items-center space-x-1 bg-slate-100 p-1 rounded-lg text-xs font-semibold">
             <a href="{{ route('validation.results', ['batch' => $batch, 'filter' => 'all', 'search' => $search]) }}"
@@ -104,16 +104,16 @@
             <input type="hidden" name="filter" value="{{ $filter }}">
             <div class="relative w-full sm:w-64">
                 <input type="text" name="search" value="{{ $search }}" placeholder="Cari nama, NIP, NIK..."
-                    class="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    class="app-input pl-9 py-2 text-xs">
                 <svg class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                 </svg>
             </div>
-            <button type="submit" class="px-3 py-1.5 bg-slate-800 text-white text-xs font-semibold rounded-lg hover:bg-slate-900">
+            <button type="submit" class="app-button-primary py-2 text-xs">
                 Cari
             </button>
             @if($search)
-                <a href="{{ route('validation.results', ['batch' => $batch, 'filter' => $filter]) }}" class="px-2.5 py-1.5 bg-slate-100 text-slate-600 text-xs font-semibold rounded-lg hover:bg-slate-200">
+                <a href="{{ route('validation.results', ['batch' => $batch, 'filter' => $filter]) }}" class="app-button-secondary py-2 text-xs">
                     Reset
                 </a>
             @endif
@@ -121,9 +121,9 @@
     </div>
 
     <!-- Tabel Rincian Baris & Anomali -->
-    <div class="bg-white rounded-xl border border-slate-200/90 shadow-xs overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200 text-xs text-left">
+    <div class="app-card overflow-hidden">
+        <div class="app-table-wrap">
+            <table class="app-table min-w-[1120px] text-left text-xs">
                 <thead class="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider">
                     <tr>
                         <th class="px-4 py-3.5 text-center">Baris</th>
@@ -166,14 +166,14 @@
                             </td>
                             <td class="px-4 py-4 whitespace-nowrap">
                                 @if(! $row->has_anomalies)
-                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                                    <span class="app-status-valid">
                                         <svg class="w-3.5 h-3.5 mr-1 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
                                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                                         </svg>
                                         Valid / Bersih
                                     </span>
                                 @else
-                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800">
+                                    <span class="app-status-error">
                                         <span class="w-1.5 h-1.5 rounded-full bg-rose-500 mr-1.5"></span>
                                         {{ $anomalies->count() }} Anomali
                                     </span>

@@ -11,7 +11,7 @@
             <p class="text-sm text-slate-500 mt-0.5">Kelola kredensial, peran akses, dan status keaktifan staf BPS.</p>
         </div>
         <div>
-            <a href="{{ route('users.create') }}" class="inline-flex items-center px-4 py-2.5 bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold rounded-lg shadow-xs hover:shadow transition-colors">
+            <a href="{{ route('users.create') }}" class="app-button-primary">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
@@ -21,18 +21,18 @@
     </div>
 
     <!-- Filter & Pencarian -->
-    <div class="bg-white p-4 rounded-xl border border-slate-200/90 shadow-xs">
+    <div class="app-card p-4">
         <form method="GET" action="{{ route('users.index') }}" class="flex flex-col sm:flex-row items-center gap-3">
             <div class="relative w-full sm:flex-1">
                 <input type="text" name="search" value="{{ $search }}" placeholder="Cari berdasarkan nama, email, atau NIP..."
-                    class="w-full pl-10 pr-4 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    class="app-input pl-10">
                 <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                 </svg>
             </div>
 
             <div class="w-full sm:w-48">
-                <select name="role" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <select name="role" class="app-input">
                     <option value="">Semua Peran</option>
                     <option value="admin" {{ $role === 'admin' ? 'selected' : '' }}>Administrator</option>
                     <option value="petugas" {{ $role === 'petugas' ? 'selected' : '' }}>Petugas BPS</option>
@@ -53,9 +53,9 @@
     </div>
 
     <!-- Tabel Daftar Pengguna -->
-    <div class="bg-white rounded-xl border border-slate-200/90 shadow-xs overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200 text-sm text-left">
+    <div class="app-card overflow-hidden">
+        <div class="app-table-wrap">
+            <table class="app-table min-w-[850px] text-left">
                 <thead class="bg-slate-50 text-slate-600 font-semibold text-xs uppercase tracking-wider">
                     <tr>
                         <th class="px-6 py-3.5">Nama & NIP</th>
@@ -78,7 +78,7 @@
                             </td>
                             <td class="px-6 py-4">
                                 @if($user->isAdmin())
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">
+                                    <span class="inline-flex items-center rounded-full border border-orange-200 bg-orange-50 px-2.5 py-0.5 text-xs font-semibold text-orange-800">
                                         Administrator
                                     </span>
                                 @else

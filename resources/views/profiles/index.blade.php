@@ -27,7 +27,7 @@
     <!-- Daftar Profil Data -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         @foreach($profiles as $profile)
-            <div class="bg-white rounded-xl border border-slate-200/90 shadow-xs p-6 flex flex-col justify-between">
+            <div class="app-card flex flex-col justify-between p-6">
                 <div>
                     <div class="flex items-center justify-between mb-3">
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold {{ $profile->is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700' }}">

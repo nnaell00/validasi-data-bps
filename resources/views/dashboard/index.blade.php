@@ -5,26 +5,30 @@
 @section('content')
 <div class="space-y-6">
     <!-- Banner Sambutan -->
-    <div class="bg-gradient-to-r from-blue-800 via-blue-700 to-sky-700 rounded-2xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden">
+    <div class="relative overflow-hidden rounded-2xl bg-bps-navy p-6 text-white sm:p-8">
+        <div class="pointer-events-none absolute inset-0 opacity-20" aria-hidden="true" style="background-image: radial-gradient(#ffffff 0.7px, transparent 0.7px); background-size: 18px 18px;"></div>
         <div class="relative z-10 max-w-3xl">
             <div class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-white/20 backdrop-blur-xs mb-3 border border-white/20">
-                <span>Peran Anda: {{ auth()->user()->isAdmin() ? 'Administrator Sistem' : 'Petugas Validasi BPS' }}</span>
+                <span class="mr-2 h-1.5 w-1.5 rounded-full bg-bps-green"></span>
+                <span>{{ auth()->user()->isAdmin() ? 'Administrator Sistem' : 'Petugas Validasi BPS' }}</span>
             </div>
             <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
-                Selamat Datang di Sistem Informasi Validasi Data
+                Sistem Validasi Data
             </h1>
-            <p class="mt-2 text-blue-100 text-sm sm:text-base leading-relaxed">
+            <p class="mt-2 max-w-2xl text-sm leading-relaxed text-blue-100 sm:text-base">
                 Aplikasi ini dirancang untuk mendeteksi anomali, memverifikasi konsistensi, dan memfasilitasi perbaikan kualitas data kepegawaian serta profil data lainnya pada BPS Kabupaten Purwakarta.
             </p>
+            <div class="mt-5 flex items-center gap-2 text-xs font-medium text-white/80">
+                <span class="h-1 w-8 rounded-full bg-bps-orange"></span>
+                Badan Pusat Statistik Kabupaten Purwakarta
+            </div>
         </div>
-        <!-- Ornamen visual halus -->
-        <div class="absolute -right-12 -bottom-12 w-64 h-64 bg-white/5 rounded-full blur-2xl pointer-events-none"></div>
     </div>
 
     <!-- Ringkasan Metrik / Statistik -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <!-- Card 1: Total Pengguna -->
-        <div class="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs flex items-center justify-between">
+        <div class="app-card flex items-center justify-between p-5">
             <div>
                 <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Akun</p>
                 <p class="text-2xl font-bold text-slate-800 mt-1">{{ $stats['total_users'] }}</p>
@@ -38,7 +42,7 @@
         </div>
 
         <!-- Card 2: Batch Validasi -->
-        <div class="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs flex items-center justify-between">
+        <div class="app-card flex items-center justify-between p-5">
             <div>
                 <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sesi Validasi</p>
                 <p class="text-2xl font-bold text-slate-800 mt-1">{{ $stats['total_batches'] }}</p>
@@ -52,7 +56,7 @@
         </div>
 
         <!-- Card 3: Data Diperiksa -->
-        <div class="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs flex items-center justify-between">
+        <div class="app-card flex items-center justify-between p-5">
             <div>
                 <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Baris Data Diperiksa</p>
                 <p class="text-2xl font-bold text-slate-800 mt-1">{{ $stats['total_records_checked'] }}</p>
@@ -66,7 +70,7 @@
         </div>
 
         <!-- Card 4: Anomali Terdeteksi -->
-        <div class="bg-white p-5 rounded-xl border border-slate-200/90 shadow-xs flex items-center justify-between">
+        <div class="app-card flex items-center justify-between p-5">
             <div>
                 <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Anomali Terdeteksi</p>
                 <p class="text-2xl font-bold text-amber-600 mt-1">{{ $stats['total_anomalies'] }}</p>
@@ -83,7 +87,7 @@
     <!-- Menu Tindakan Cepat (Quick Actions) -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Kolom 1 & 2: Panduan Alur Kerja -->
-        <div class="lg:col-span-2 bg-white rounded-xl border border-slate-200/90 shadow-xs p-6">
+        <div class="app-card p-6 lg:col-span-2">
             <h2 class="text-base font-bold text-slate-800 mb-4 flex items-center">
                 <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
@@ -127,7 +131,7 @@
         </div>
 
         <!-- Kolom 3: Panel Aksi Cepat & Info Peran -->
-        <div class="bg-white rounded-xl border border-slate-200/90 shadow-xs p-6 flex flex-col justify-between">
+        <div class="app-card flex flex-col justify-between p-6">
             <div>
                 <h3 class="text-base font-bold text-slate-800 mb-3 flex items-center">
                     <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -139,14 +143,14 @@
 
                 <div class="space-y-2 mt-4">
                     @if(auth()->user()->isAdmin())
-                        <a href="{{ route('users.index') }}" class="w-full flex items-center justify-between p-3 rounded-lg border border-purple-200 bg-purple-50 hover:bg-purple-100 transition-colors text-purple-900 text-sm font-semibold">
+                        <a href="{{ route('users.index') }}" class="w-full flex items-center justify-between rounded-lg border border-bps-blue/15 bg-bps-light p-3 text-sm font-semibold text-bps-navy transition-colors hover:bg-blue-100">
                             <span class="flex items-center">
-                                <svg class="w-4 h-4 mr-2 text-purple-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="mr-2 h-4 w-4 text-bps-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                                 </svg>
                                 Kelola Pengguna (Admin)
                             </span>
-                            <span class="text-xs bg-purple-200 text-purple-800 px-2 py-0.5 rounded-full font-bold">Buka</span>
+                            <span class="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-bps-blue">Buka</span>
                         </a>
                     @endif
 

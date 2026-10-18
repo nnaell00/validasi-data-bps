@@ -4,17 +4,17 @@
 
 @section('content')
 <div class="max-w-2xl mx-auto space-y-6">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <h1 class="text-2xl font-bold text-slate-800 tracking-tight">Tambah Pengguna Baru</h1>
             <p class="text-sm text-slate-500 mt-0.5">Daftarkan akun Admin atau Petugas BPS ke dalam sistem.</p>
         </div>
-        <a href="{{ route('users.index') }}" class="inline-flex items-center text-sm font-medium text-slate-600 hover:text-slate-900">
+        <a href="{{ route('users.index') }}" class="app-button-secondary text-sm">
             &larr; Kembali
         </a>
     </div>
 
-    <div class="bg-white rounded-xl border border-slate-200/90 shadow-xs p-6 sm:p-8">
+    <div class="app-card p-6 sm:p-8">
         @if($errors->any())
             <div class="p-4 mb-6 text-xs text-red-800 rounded-lg bg-red-50 border border-red-200">
                 <div class="font-bold mb-1">Terdapat kesalahan pengisian formulir:</div>
@@ -32,7 +32,7 @@
             <div>
                 <label for="name" class="block text-xs font-semibold text-slate-700 mb-1.5">Nama Lengkap <span class="text-red-500">*</span></label>
                 <input type="text" id="name" name="name" value="{{ old('name') }}" required
-                    class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    class="app-input"
                     placeholder="Contoh: Budi Santoso, S.Si">
             </div>
 
@@ -40,13 +40,13 @@
                 <div>
                     <label for="email" class="block text-xs font-semibold text-slate-700 mb-1.5">Email BPS <span class="text-red-500">*</span></label>
                     <input type="email" id="email" name="email" value="{{ old('email') }}" required
-                        class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        class="app-input"
                         placeholder="nama@bps.go.id">
                 </div>
 
                 <div>
                     <label for="role" class="block text-xs font-semibold text-slate-700 mb-1.5">Peran Hak Akses <span class="text-red-500">*</span></label>
-                    <select id="role" name="role" required class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select id="role" name="role" required class="app-input">
                         <option value="petugas" {{ old('role') === 'petugas' ? 'selected' : '' }}>Petugas BPS (Validasi & Perbaikan)</option>
                         <option value="admin" {{ old('role') === 'admin' ? 'selected' : '' }}>Administrator (Kelola Sistem & Aturan)</option>
                     </select>
@@ -57,14 +57,14 @@
                 <div>
                     <label for="nip" class="block text-xs font-semibold text-slate-700 mb-1.5">NIP (Opsional)</label>
                     <input type="text" id="nip" name="nip" value="{{ old('nip') }}"
-                        class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        class="app-input"
                         placeholder="18 digit angka NIP">
                 </div>
 
                 <div>
                     <label for="phone" class="block text-xs font-semibold text-slate-700 mb-1.5">No. Telepon / WA (Opsional)</label>
                     <input type="text" id="phone" name="phone" value="{{ old('phone') }}"
-                        class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        class="app-input"
                         placeholder="Contoh: 08123456789">
                 </div>
             </div>
@@ -73,14 +73,14 @@
                 <div>
                     <label for="password" class="block text-xs font-semibold text-slate-700 mb-1.5">Kata Sandi <span class="text-red-500">*</span></label>
                     <input type="password" id="password" name="password" required
-                        class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        class="app-input"
                         placeholder="Minimal 6 karakter">
                 </div>
 
                 <div>
                     <label for="password_confirmation" class="block text-xs font-semibold text-slate-700 mb-1.5">Konfirmasi Kata Sandi <span class="text-red-500">*</span></label>
                     <input type="password" id="password_confirmation" name="password_confirmation" required
-                        class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        class="app-input"
                         placeholder="Ulangi kata sandi">
                 </div>
             </div>
@@ -94,10 +94,10 @@
             </div>
 
             <div class="flex items-center justify-end space-x-3 pt-4 border-t border-slate-200">
-                <a href="{{ route('users.index') }}" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg transition-colors">
+                <a href="{{ route('users.index') }}" class="app-button-secondary">
                     Batal
                 </a>
-                <button type="submit" class="px-5 py-2 bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold rounded-lg shadow-xs hover:shadow transition-colors">
+                <button type="submit" class="app-button-primary">
                     Simpan Pengguna
                 </button>
             </div>

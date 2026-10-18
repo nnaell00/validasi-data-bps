@@ -5,7 +5,7 @@
 @section('content')
 <div class="max-w-4xl mx-auto space-y-6">
     <!-- Header Halaman -->
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <div class="flex items-center space-x-2 text-xs text-slate-500 mb-1">
                 <a href="{{ route('validation.results', $batch) }}" class="text-blue-600 hover:underline">&larr; Kembali ke Hasil Validasi</a>
@@ -19,7 +19,7 @@
                 Perbaiki nilai data yang mengalami anomali. Seluruh riwayat perubahan akan dicatat ke audit log.
             </p>
         </div>
-        <a href="{{ route('validation.results', $batch) }}" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors">
+        <a href="{{ route('validation.results', $batch) }}" class="app-button-secondary text-xs">
             Kembali
         </a>
     </div>
@@ -38,7 +38,7 @@
     </div>
 
     <!-- Form Koreksi Baris Data -->
-    <div class="bg-white rounded-xl border border-slate-200/90 shadow-xs p-6 sm:p-8">
+    <div class="app-card p-6 sm:p-8">
         <form action="{{ route('validation.update-row', [$batch, $row]) }}" method="POST" class="space-y-6">
             @csrf
             @method('PUT')
@@ -73,7 +73,7 @@
                         <div>
                             <input type="text" id="col_{{ $colIndex }}" name="data[{{ $colIndex }}]" value="{{ old("data.{$colIndex}", $currentVal) }}"
                                 {{ $isRawCol ? 'readonly' : '' }}
-                                class="w-full px-3 py-2 text-xs font-mono bg-white border {{ $hasAnomaly ? 'border-rose-400 text-rose-900 focus:ring-rose-500' : 'border-slate-300 text-slate-800 focus:ring-blue-500' }} rounded-lg focus:outline-none focus:ring-2 {{ $isRawCol ? 'bg-slate-100 cursor-not-allowed' : '' }}">
+                                class="app-input font-mono text-xs {{ $hasAnomaly ? 'border-rose-400 text-rose-900 focus:border-rose-500 focus:ring-rose-500/10' : '' }} {{ $isRawCol ? 'cursor-not-allowed bg-slate-100' : '' }}">
                         </div>
 
                         <!-- Pesan Anomali Jika Ada -->
@@ -104,11 +104,11 @@
 
             <!-- Tombol Simpan & Batal -->
             <div class="flex items-center justify-between pt-6 border-t border-slate-200">
-                <a href="{{ route('validation.results', $batch) }}" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors">
+                <a href="{{ route('validation.results', $batch) }}" class="app-button-secondary text-xs">
                     &larr; Batal & Kembali
                 </a>
 
-                <button type="submit" class="px-6 py-2.5 bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold rounded-lg shadow-sm hover:shadow transition-colors flex items-center space-x-1.5">
+                <button type="submit" class="app-button-primary text-xs">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                     </svg>

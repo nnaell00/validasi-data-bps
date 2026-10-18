@@ -11,7 +11,7 @@
             <p class="text-sm text-slate-500 mt-0.5">Unggah data kepegawaian untuk diperiksa anomali dan divalidasi kualitasnya.</p>
         </div>
         <div>
-            <a href="{{ route('batches.dummy-template') }}" class="inline-flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-xs hover:shadow transition-colors">
+            <a href="{{ route('batches.dummy-template') }}" class="app-button-success text-xs">
                 <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                 </svg>
@@ -34,7 +34,7 @@
     </div>
 
     <!-- Form Upload File -->
-    <div class="bg-white rounded-xl border border-slate-200/90 shadow-xs p-6 sm:p-8">
+    <div class="app-card p-6 sm:p-8">
         @if($errors->any())
             <div class="p-4 mb-6 text-xs text-red-800 rounded-lg bg-red-50 border border-red-200">
                 <div class="font-bold mb-1">Gagal mengunggah berkas:</div>
@@ -54,7 +54,7 @@
                     Pilih Profil Validasi Data <span class="text-red-500">*</span>
                 </label>
                 <select id="validation_profile_id" name="validation_profile_id" required
-                    class="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    class="app-input">
                     @foreach($profiles as $profile)
                         <option value="{{ $profile->id }}" {{ $loop->first ? 'selected' : '' }}>
                             {{ $profile->name }} ({{ $profile->rules_count ?? $profile->rules->count() }} Aturan Validasi)
@@ -68,7 +68,7 @@
                 <label class="block text-xs font-semibold text-slate-700 mb-1.5">
                     Pilih Berkas Spreadsheet Excel (.xlsx / .xls) <span class="text-red-500">*</span>
                 </label>
-                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-xl hover:border-blue-400 bg-slate-50 transition-colors">
+                <div class="mt-1 flex justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-6 pb-6 pt-5 transition-colors hover:border-bps-blue">
                     <div class="space-y-2 text-center">
                         <svg class="mx-auto h-12 w-12 text-slate-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
                             <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -92,10 +92,10 @@
             </div>
 
             <div class="flex items-center justify-end space-x-3 pt-4 border-t border-slate-200">
-                <a href="{{ route('batches.index') }}" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg transition-colors">
+                <a href="{{ route('batches.index') }}" class="app-button-secondary">
                     Batal
                 </a>
-                <button type="submit" class="px-5 py-2.5 bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold rounded-lg shadow-xs hover:shadow transition-colors flex items-center space-x-2">
+                <button type="submit" class="app-button-primary">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                     </svg>

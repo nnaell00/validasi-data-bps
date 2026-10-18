@@ -11,6 +11,24 @@ class AuthAndRoleTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_login_page_shows_manual_login_form_without_demo_credentials(): void
+    {
+        $response = $this->get('/login');
+
+        $response->assertOk();
+        $response->assertSee('Masuk ke Sistem');
+        $response->assertSee('Badan Pusat Statistik');
+        $response->assertSee('Kabupaten Purwakarta');
+        $response->assertSee('Sistem Validasi Data');
+        $response->assertSee('Ingat saya di perangkat ini');
+        $response->assertSee('data-password-toggle', false);
+        $response->assertDontSee('AKUN PENGUJIAN');
+        $response->assertDontSee('admin@bps.go.id');
+        $response->assertDontSee('petugas@bps.go.id');
+        $response->assertDontSee('fillCredentials');
+        $response->assertDontSee('value="password"', false);
+    }
+
     public function test_admin_can_login_and_access_user_management(): void
     {
         $admin = User::create([

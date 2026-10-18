@@ -5,19 +5,19 @@
 @section('content')
 <div class="space-y-6">
     <!-- Header Halaman & Tombol Unggah -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <h1 class="text-2xl font-bold text-slate-800 tracking-tight">Riwayat Sesi Validasi Data</h1>
             <p class="text-sm text-slate-500 mt-0.5">Daftar berkas Excel yang telah diunggah dan status hasil pemeriksaannya.</p>
         </div>
-        <div class="flex items-center space-x-2">
-            <a href="{{ route('batches.dummy-template') }}" class="inline-flex items-center px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors">
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="{{ route('batches.dummy-template') }}" class="app-button-success text-xs">
                 <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                 </svg>
                 Unduh Data Dummy
             </a>
-            <a href="{{ route('batches.create') }}" class="inline-flex items-center px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors">
+            <a href="{{ route('batches.create') }}" class="app-button-primary text-xs">
                 <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
@@ -27,9 +27,9 @@
     </div>
 
     <!-- Tabel Daftar Batch -->
-    <div class="bg-white rounded-xl border border-slate-200/90 shadow-xs overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200 text-xs text-left">
+    <div class="app-card overflow-hidden">
+        <div class="app-table-wrap">
+            <table class="app-table min-w-[1050px] text-left">
                 <thead class="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider">
                     <tr>
                         <th class="px-6 py-3.5">Nama Berkas Excel</th>
@@ -65,7 +65,7 @@
                             </td>
                             <td class="px-6 py-4">
                                 @if($batch->status === 'uploaded')
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800">
+                                    <span class="app-status-warning">
                                         Belum Divalidasi
                                     </span>
                                 @elseif($batch->status === 'validated')
@@ -73,7 +73,7 @@
                                         Sudah Divalidasi
                                     </span>
                                 @else
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800">
+                                    <span class="app-status-valid">
                                         Selesai / Terverifikasi
                                     </span>
                                 @endif
@@ -82,23 +82,25 @@
                                 {{ $batch->created_at->format('d/m/Y H:i') }}
                             </td>
                             <td class="px-6 py-4 text-right space-x-2 whitespace-nowrap">
-                                <a href="{{ route('batches.preview', $batch) }}" class="inline-flex items-center text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline">
+                                <div class="flex flex-wrap justify-end gap-x-3 gap-y-2">
+                                <a href="{{ route('batches.preview', $batch) }}" class="inline-flex items-center text-xs font-semibold text-bps-blue hover:text-bps-navy hover:underline">
                                     Pratinjau Data
                                 </a>
-                                <a href="{{ route('validation.audit', $batch) }}" class="inline-flex items-center text-xs font-semibold text-violet-600 hover:text-violet-800 hover:underline ml-2">
+                                <a href="{{ route('validation.audit', $batch) }}" class="inline-flex items-center text-xs font-semibold text-violet-700 hover:text-violet-900 hover:underline">
                                     Audit Trail
                                 </a>
                                 @if($batch->status === 'validated' || $batch->status === 'completed')
-                                    <a href="{{ route('validation.results', $batch) }}" class="inline-flex items-center text-xs font-bold text-emerald-600 hover:text-emerald-800 hover:underline ml-2">
+                                    <a href="{{ route('validation.results', $batch) }}" class="inline-flex items-center text-xs font-bold text-emerald-700 hover:text-emerald-900 hover:underline">
                                         Hasil Validasi &rarr;
                                     </a>
-                                    <a href="{{ route('validation.export.data', $batch) }}" class="inline-flex items-center text-xs font-semibold text-emerald-700 hover:text-emerald-900 hover:underline ml-2">
+                                    <a href="{{ route('validation.export.data', $batch) }}" class="inline-flex items-center text-xs font-semibold text-emerald-700 hover:text-emerald-900 hover:underline">
                                         Ekspor Data
                                     </a>
-                                    <a href="{{ route('validation.export.report', $batch) }}" class="inline-flex items-center text-xs font-semibold text-teal-700 hover:text-teal-900 hover:underline ml-2">
+                                    <a href="{{ route('validation.export.report', $batch) }}" class="inline-flex items-center text-xs font-semibold text-teal-700 hover:text-teal-900 hover:underline">
                                         Ekspor Laporan
                                     </a>
                                 @endif
+                                </div>
                             </td>
                         </tr>
                     @empty

@@ -4,17 +4,17 @@
 
 @section('content')
 <div class="max-w-2xl mx-auto space-y-6">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <h1 class="text-2xl font-bold text-slate-800 tracking-tight">Ubah Aturan Validasi</h1>
             <p class="text-sm text-slate-500 mt-0.5">Kolom: <strong class="text-slate-900">{{ $rule->column_name }}</strong> (Profil: {{ $profile->name }})</p>
         </div>
-        <a href="{{ route('profiles.show', $profile) }}" class="inline-flex items-center text-sm font-medium text-slate-600 hover:text-slate-900">
+        <a href="{{ route('profiles.show', $profile) }}" class="app-button-secondary text-sm">
             &larr; Kembali
         </a>
     </div>
 
-    <div class="bg-white rounded-xl border border-slate-200/90 shadow-xs p-6 sm:p-8">
+    <div class="app-card p-6 sm:p-8">
         @if($errors->any())
             <div class="p-4 mb-6 text-xs text-red-800 rounded-lg bg-red-50 border border-red-200">
                 <div class="font-bold mb-1">Terdapat kesalahan pengisian:</div>
@@ -30,7 +30,7 @@
             @csrf
             @method('PUT')
 
-            <div class="grid grid-cols-2 gap-4 p-3.5 bg-slate-50 rounded-lg border border-slate-200 text-xs">
+            <div class="grid grid-cols-1 gap-4 rounded-lg border border-slate-200 bg-slate-50 p-3.5 text-xs sm:grid-cols-2">
                 <div>
                     <span class="text-slate-500 block">Indeks Posisi Kolom:</span>
                     <span class="font-bold text-slate-800 font-mono text-sm">#{{ $rule->column_index }}</span>
@@ -44,7 +44,7 @@
             <div>
                 <label for="error_message" class="block text-xs font-semibold text-slate-700 mb-1.5">Pesan Kesalahan Anomali <span class="text-red-500">*</span></label>
                 <input type="text" id="error_message" name="error_message" value="{{ old('error_message', $rule->error_message) }}" required
-                    class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    class="app-input"
                     placeholder="Contoh: NIP harus berupa 18 digit angka valid">
                 <p class="text-[11px] text-slate-500 mt-1">Pesan ini akan ditampilkan kepada Petugas BPS saat anomali data terdeteksi.</p>
             </div>
@@ -53,7 +53,7 @@
                 <div>
                     <label for="pattern" class="block text-xs font-semibold text-slate-700 mb-1.5">Pola Format Regular Expression (Regex)</label>
                     <input type="text" id="pattern" name="pattern" value="{{ old('pattern', $rule->parameters['pattern'] ?? '') }}"
-                        class="w-full px-3.5 py-2 text-sm font-mono bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        class="app-input font-mono">
                 </div>
             @endif
 
@@ -78,16 +78,16 @@
                 <div>
                     <label for="confirmation_note" class="block text-xs font-semibold text-amber-900 mb-1">Catatan Konfirmasi BPS</label>
                     <textarea id="confirmation_note" name="confirmation_note" rows="2"
-                        class="w-full px-3 py-2 text-xs bg-white border border-amber-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 text-slate-800"
+                        class="app-input border-amber-300 text-xs focus:border-amber-500 focus:ring-amber-500/10"
                         placeholder="Contoh: Perlu kepastian dari Kasubag Umum apakah NIP menggunakan spasi atau murni 18 digit">{{ old('confirmation_note', $rule->confirmation_note) }}</textarea>
                 </div>
             </div>
 
             <div class="flex items-center justify-end space-x-3 pt-4 border-t border-slate-200">
-                <a href="{{ route('profiles.show', $profile) }}" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg transition-colors">
+                <a href="{{ route('profiles.show', $profile) }}" class="app-button-secondary">
                     Batal
                 </a>
-                <button type="submit" class="px-5 py-2 bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold rounded-lg shadow-xs hover:shadow transition-colors">
+                <button type="submit" class="app-button-primary">
                     Simpan Perubahan Aturan
                 </button>
             </div>

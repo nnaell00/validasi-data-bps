@@ -15,18 +15,18 @@
             <p class="mt-1 text-sm text-slate-500">Sesi #{{ $batch->id }} &middot; {{ $batch->file_name }}</p>
         </div>
         <div class="flex flex-wrap gap-2">
-            <a href="{{ route('validation.export.data', $batch) }}" class="rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-emerald-700">
+            <a href="{{ route('validation.export.data', $batch) }}" class="app-button-success text-xs">
                 Ekspor Data Excel
             </a>
-            <a href="{{ route('validation.export.report', $batch) }}" class="rounded-lg bg-teal-700 px-3.5 py-2 text-xs font-semibold text-white hover:bg-teal-800">
+            <a href="{{ route('validation.export.report', $batch) }}" class="app-button-primary bg-teal-700 hover:bg-teal-800 focus:ring-teal-700/20 text-xs">
                 Ekspor Laporan 2 Sheet
             </a>
         </div>
     </div>
 
-    <div class="overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-xs">
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200 text-left text-xs">
+    <div class="app-card overflow-hidden">
+        <div class="app-table-wrap">
+            <table class="app-table min-w-[1100px] text-left text-xs">
                 <thead class="bg-slate-50 font-semibold uppercase tracking-wider text-slate-600">
                     <tr>
                         <th class="px-4 py-3.5">Waktu</th>

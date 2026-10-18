@@ -22,6 +22,6 @@ class ExampleTest extends TestCase
         $response = $this->get('/login');
 
         $response->assertStatus(200);
-        $response->assertSee('SISTEM VALIDASI DATA');
+        $response->assertSee('Sistem Validasi Data');
     }
 }
