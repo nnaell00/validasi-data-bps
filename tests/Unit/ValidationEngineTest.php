@@ -12,6 +12,59 @@ class ValidationEngineTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_valid_dates_in_configured_formats_are_accepted(): void
+    {
+        $profile = $this->createDateValidationProfile();
+        $engine = new ValidationEngine;
+
+        $result = $engine->validate($profile, [
+            [0 => '2024-02-29'],
+            [0 => '29/02/2024'],
+            [0 => '2024/02/29'],
+        ]);
+
+        $this->assertSame(0, $result['anomalies_count']);
+        $this->assertSame(3, $result['valid_rows_count']);
+    }
+
+    public function test_empty_required_date_is_recorded_as_an_anomaly(): void
+    {
+        $profile = $this->createDateValidationProfile();
+        $engine = new ValidationEngine;
+
+        $result = $engine->validate($profile, [[0 => '']]);
+
+        $this->assertSame(1, $result['anomalies_count']);
+        $this->assertSame('', $result['anomalies'][0]['original_value']);
+        $this->assertSame('Tanggal harus berupa tanggal yang valid.', $result['anomalies'][0]['error_message']);
+    }
+
+    public function test_invalid_dates_are_recorded_as_anomalies_without_throwing(): void
+    {
+        $profile = $this->createDateValidationProfile();
+        $engine = new ValidationEngine;
+
+        $result = $engine->validate($profile, [
+            [0 => '31/02/2024'],
+            [0 => 'bukan-tanggal'],
+        ]);
+
+        $this->assertSame(2, $result['anomalies_count']);
+        $this->assertSame('31/02/2024', $result['anomalies'][0]['original_value']);
+        $this->assertSame('bukan-tanggal', $result['anomalies'][1]['original_value']);
+    }
+
+    public function test_valid_excel_date_serial_is_accepted(): void
+    {
+        $profile = $this->createDateValidationProfile();
+        $engine = new ValidationEngine;
+
+        $result = $engine->validate($profile, [[0 => 45352]]);
+
+        $this->assertSame(0, $result['anomalies_count']);
+        $this->assertSame(1, $result['valid_rows_count']);
+    }
+
     public function test_empty_phone_number_is_not_an_anomaly(): void
     {
         $profile = ValidationProfile::create([
@@ -36,7 +89,7 @@ class ValidationEngineTest extends TestCase
             [19 => '081234567890'], // Baris dengan No. WA valid
         ];
 
-        $engine = new ValidationEngine();
+        $engine = new ValidationEngine;
         $result = $engine->validate($profile, $rows);
 
         $this->assertEquals(0, $result['anomalies_count'], 'Nilai kosong pada No. WA tidak boleh dianggap sebagai anomali.');
@@ -81,7 +134,7 @@ class ValidationEngineTest extends TestCase
             [1 => 'Ahmad Dahlan', 2 => '198501012010011001'],
         ];
 
-        $engine = new ValidationEngine();
+        $engine = new ValidationEngine;
         $result = $engine->validate($profile, $rows);
 
         $this->assertEquals(2, $result['anomalies_count']);
@@ -92,5 +145,27 @@ class ValidationEngineTest extends TestCase
         $nipAnomaly = collect($result['anomalies'])->firstWhere('column_name', 'NIP');
         $this->assertNotNull($nipAnomaly);
         $this->assertTrue($nipAnomaly['needs_confirmation']);
+    }
+
+    private function createDateValidationProfile(): ValidationProfile
+    {
+        $profile = ValidationProfile::create([
+            'name' => 'Profil Tanggal Uji',
+            'slug' => 'profil-tanggal-uji',
+        ]);
+
+        ValidationRule::create([
+            'validation_profile_id' => $profile->id,
+            'column_name' => 'Tanggal',
+            'column_index' => 0,
+            'data_type' => 'date',
+            'is_required' => true,
+            'validation_type' => 'date_format',
+            'parameters' => ['format' => 'Y-m-d|d/m/Y|Y/m/d'],
+            'error_message' => 'Tanggal harus berupa tanggal yang valid.',
+            'is_active' => true,
+        ]);
+
+        return $profile;
     }
 }

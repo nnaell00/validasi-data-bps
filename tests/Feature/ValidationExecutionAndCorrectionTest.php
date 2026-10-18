@@ -8,8 +8,11 @@ use App\Models\User;
 use App\Models\ValidationBatch;
 use App\Models\ValidationProfile;
 use App\Models\ValidationRule;
+use App\Services\ExcelDataParser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Tests\TestCase;
 
 class ValidationExecutionAndCorrectionTest extends TestCase
@@ -120,6 +123,92 @@ class ValidationExecutionAndCorrectionTest extends TestCase
             'batch_row_id' => $row->id,
             'action' => 'correction',
         ]);
+    }
+
+    public function test_validation_handles_excel_formatted_and_invalid_dates_without_failing(): void
+    {
+        $petugas = User::create([
+            'name' => 'Petugas Uji',
+            'email' => 'petugas-tanggal@bps.go.id',
+            'role' => 'petugas',
+            'password' => Hash::make('password'),
+            'is_active' => true,
+        ]);
+        $profile = ValidationProfile::create([
+            'name' => 'Profil Tanggal',
+            'slug' => 'profil-tanggal',
+            'is_active' => true,
+        ]);
+        ValidationRule::create([
+            'validation_profile_id' => $profile->id,
+            'column_name' => 'Tanggal Uji',
+            'column_index' => 0,
+            'data_type' => 'date',
+            'is_required' => true,
+            'validation_type' => 'date_format',
+            'parameters' => ['format' => 'Y-m-d|d/m/Y|Y/m/d'],
+            'error_message' => 'Tanggal harus berupa tanggal yang valid.',
+            'is_active' => true,
+        ]);
+
+        $filePath = tempnam(sys_get_temp_dir(), 'bps-synthetic-dates-');
+        if ($filePath === false) {
+            self::fail('File sementara untuk pengujian tanggal tidak dapat dibuat.');
+        }
+
+        try {
+            $spreadsheet = new Spreadsheet;
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->fromArray([
+                ['Tanggal Uji', 'Catatan'],
+                [45352, 'Tanggal Excel sintetis'],
+                ['31/02/2024', 'Tanggal kalender tidak valid'],
+                [null, 'Tanggal kosong'],
+            ], null, 'A1');
+            $sheet->getStyle('A2')->getNumberFormat()->setFormatCode('dd/mm/yyyy');
+            (new Xlsx($spreadsheet))->save($filePath);
+
+            $parsed = (new ExcelDataParser)->parse($filePath);
+        } finally {
+            if (file_exists($filePath)) {
+                unlink($filePath);
+            }
+        }
+
+        $this->assertSame('01/03/2024', $parsed['rows'][0][0]);
+
+        $batch = ValidationBatch::create([
+            'user_id' => $petugas->id,
+            'validation_profile_id' => $profile->id,
+            'file_name' => 'tanggal_sintetis.xlsx',
+            'file_path' => 'synthetic/tanggal.xlsx',
+            'total_rows' => count($parsed['rows']),
+            'status' => 'uploaded',
+            'headers' => $parsed['headers'],
+        ]);
+
+        foreach ($parsed['rows'] as $rowIndex => $rowData) {
+            BatchRow::create([
+                'validation_batch_id' => $batch->id,
+                'row_index' => $rowIndex,
+                'row_number' => $rowIndex + 1,
+                'original_data' => $rowData,
+                'current_data' => $rowData,
+            ]);
+        }
+
+        $response = $this->actingAs($petugas)->post(route('validation.execute', $batch));
+
+        $response->assertRedirect(route('validation.results', $batch));
+        $this->assertSame('validated', $batch->refresh()->status);
+        $this->assertDatabaseCount('row_anomalies', 2);
+        $this->assertDatabaseHas('row_anomalies', [
+            'validation_batch_id' => $batch->id,
+            'column_name' => 'Tanggal Uji',
+            'invalid_value' => '31/02/2024',
+            'error_message' => 'Tanggal harus berupa tanggal yang valid.',
+        ]);
+        $this->assertSame($parsed['rows'], $batch->rows()->orderBy('row_index')->pluck('original_data')->all());
     }
 
     public function test_execution_anomaly_detection_correction_and_revalidation(): void

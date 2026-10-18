@@ -4,16 +4,17 @@ namespace App\Services;
 
 use App\Models\ValidationProfile;
 use App\Models\ValidationRule;
-use Carbon\Carbon;
+use DateTimeImmutable;
 use DateTimeInterface;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 class ValidationEngine
 {
     /**
      * Memvalidasi kumpulan baris data berdasarkan aturan dari ValidationProfile.
      *
-     * @param ValidationProfile $profile Profil validasi aktif
-     * @param array $rows Kumpulan baris data mentah dari Excel
+     * @param  ValidationProfile  $profile  Profil validasi aktif
+     * @param  array  $rows  Kumpulan baris data mentah dari Excel
      * @return array Hasil analisis validasi dan daftar anomali
      */
     public function validate(ValidationProfile $profile, array $rows): array
@@ -46,6 +47,7 @@ class ValidationEngine
                             $rule->error_message ?: "Kolom '{$rule->column_name}' wajib diisi (tidak boleh kosong)."
                         );
                     }
+
                     // Jika tidak wajib (seperti No. WA), nilai kosong aman dan dilewati
                     continue;
                 }
@@ -111,6 +113,7 @@ class ValidationEngine
                 if (! $pattern) {
                     return true;
                 }
+
                 return (bool) preg_match($pattern, $strValue);
 
             case 'in_list':
@@ -124,15 +127,17 @@ class ValidationEngine
                         return true;
                     }
                 }
+
                 return false;
 
             case 'date_format':
-                return $this->isValidDate($value);
+                return $this->isValidDate($value, $rule);
 
             case 'phone':
                 // Bersihkan spasi, tanda hubung, atau tanda kurung
                 $cleaned = preg_replace('/[\s\-\(\)]+/', '', $strValue);
                 $pattern = $rule->parameters['pattern'] ?? '/^(\+?62|08)\d{8,13}$/';
+
                 return (bool) preg_match($pattern, $cleaned);
 
             case 'numeric':
@@ -146,6 +151,7 @@ class ValidationEngine
                 if (isset($rule->parameters['max']) && $num > $rule->parameters['max']) {
                     return false;
                 }
+
                 return true;
 
             case 'none':
@@ -153,6 +159,7 @@ class ValidationEngine
                 if (isset($rule->parameters['min_length']) && mb_strlen($strValue) < $rule->parameters['min_length']) {
                     return false;
                 }
+
                 return true;
         }
     }
@@ -160,34 +167,71 @@ class ValidationEngine
     /**
      * Memeriksa apakah nilai merupakan tanggal yang valid (termasuk serial date Excel).
      */
-    private function isValidDate(mixed $value): bool
+    private function isValidDate(mixed $value, ValidationRule $rule): bool
     {
         if ($value instanceof DateTimeInterface) {
             return true;
         }
 
-        $str = trim((string) $value);
-
-        // Jika berupa serial integer Excel (misal: 44927)
-        if (is_numeric($str) && (int) $str > 1000 && (int) $str < 100000) {
-            return true;
+        if (! is_scalar($value)) {
+            return false;
         }
 
-        // Coba parsing dengan berbagai format umum
-        $formats = ['Y-m-d', 'd/m/Y', 'd-m-Y', 'Y/m/d', 'Y-m-d H:i:s', 'd/m/Y H:i:s'];
-        foreach ($formats as $fmt) {
-            $parsed = Carbon::createFromFormat($fmt, $str);
-            if ($parsed && $parsed->format($fmt) === $str) {
+        $str = trim((string) $value);
+        if ($str === '') {
+            return false;
+        }
+
+        if (is_numeric($str)) {
+            $serial = (float) $str;
+
+            if ($serial > 1000 && $serial <= 2958465) {
+                try {
+                    ExcelDate::excelToDateTimeObject($serial);
+
+                    return true;
+                } catch (\Exception) {
+                    return false;
+                }
+            }
+        }
+
+        $configuredFormats = $rule->parameters['format'] ?? [];
+        $formats = is_string($configuredFormats)
+            ? explode('|', $configuredFormats)
+            : (is_array($configuredFormats) ? $configuredFormats : []);
+        $formats = array_unique(array_merge($formats, [
+            'Y-m-d',
+            'd/m/Y',
+            'd-m-Y',
+            'Y/m/d',
+            'Y-m-d H:i:s',
+            'd/m/Y H:i:s',
+            'm/d/Y',
+            'm-d-Y',
+            'm/d/y',
+            'n/j/Y',
+            'n/j/y',
+        ]));
+
+        foreach ($formats as $format) {
+            if (! is_string($format) || $format === '') {
+                continue;
+            }
+
+            $parsed = DateTimeImmutable::createFromFormat('!'.$format, $str);
+            $errors = DateTimeImmutable::getLastErrors();
+
+            if (
+                $parsed !== false
+                && ($errors === false || ($errors['warning_count'] === 0 && $errors['error_count'] === 0))
+                && $parsed->format($format) === $str
+            ) {
                 return true;
             }
         }
 
-        try {
-            $carbon = Carbon::parse($str);
-            return $carbon->isValid();
-        } catch (\Throwable) {
-            return false;
-        }
+        return false;
     }
 
     /**
