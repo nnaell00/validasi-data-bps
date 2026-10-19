@@ -20,6 +20,7 @@ class AuthAndRoleTest extends TestCase
         $response->assertSee('Badan Pusat Statistik');
         $response->assertSee('Kabupaten Purwakarta');
         $response->assertSee('Sistem Validasi Data');
+        $response->assertSee('images/logo-bps.webp');
         $response->assertSee('Ingat saya di perangkat ini');
         $response->assertSee('data-password-toggle', false);
         $response->assertDontSee('AKUN PENGUJIAN');
@@ -50,6 +51,7 @@ class AuthAndRoleTest extends TestCase
         $dashResponse = $this->actingAs($admin)->get('/dashboard');
         $dashResponse->assertStatus(200);
         $dashResponse->assertSee('Administrator');
+        $dashResponse->assertSee('images/logo-bps.webp');
         $dashResponse->assertSee('Profil & Aturan');
         $dashResponse->assertSee('Pengguna');
         $dashResponse->assertSee(route('profiles.index'), false);
@@ -84,6 +86,7 @@ class AuthAndRoleTest extends TestCase
         $dashResponse = $this->actingAs($petugas)->get('/dashboard');
         $dashResponse->assertStatus(200);
         $dashResponse->assertSee('Petugas BPS');
+        $dashResponse->assertSee('images/logo-bps.webp');
         $dashResponse->assertSee('Unggah Excel');
         $dashResponse->assertSee('Riwayat Validasi');
         $dashResponse->assertDontSee(route('profiles.index'), false);

@@ -32,6 +32,26 @@ class BatchUploadAndPreviewTest extends TestCase
         $response->assertHeader('content-disposition', 'attachment; filename=data_kepegawaian_dummy_bps_purwakarta.xlsx');
     }
 
+    public function test_empty_validation_history_renders_centered_empty_state_without_table_headers(): void
+    {
+        $user = User::create([
+            'name' => 'Petugas BPS Test',
+            'email' => 'petugas-kosong.test@bps.go.id',
+            'role' => 'petugas',
+            'password' => Hash::make('password'),
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($user)->get(route('batches.index'));
+
+        $response->assertOk();
+        $response->assertSee('Belum ada berkas validasi yang diunggah');
+        $response->assertSee('min-h-64 items-center justify-center', false);
+        $response->assertSee(route('batches.dummy-template'), false);
+        $response->assertSee(route('batches.create'), false);
+        $response->assertDontSee('Nama Berkas Excel');
+    }
+
     public function test_petugas_can_upload_excel_and_see_raw_preview(): void
     {
         $user = User::create([
@@ -89,5 +109,10 @@ class BatchUploadAndPreviewTest extends TestCase
 
         $historyResponse->assertOk();
         $historyResponse->assertSee('19/10/2026 13:31 WIB');
+        $historyResponse->assertSee('Nama Berkas Excel');
+        $historyResponse->assertSee('Profil Data');
+        $historyResponse->assertSee('Diupload Oleh');
+        $historyResponse->assertSee('Total Baris');
+        $historyResponse->assertSee('Waktu Unggah');
     }
 }

@@ -29,18 +29,20 @@
     <!-- Tabel Daftar Batch -->
     <div class="app-card overflow-hidden">
         <div class="app-table-wrap">
-            <table class="app-table min-w-[1050px] text-left">
-                <thead class="bg-slate-50 text-slate-600 font-semibold uppercase tracking-wider">
-                    <tr>
-                        <th class="px-6 py-3.5">Nama Berkas Excel</th>
-                        <th class="px-6 py-3.5">Profil Data</th>
-                        <th class="px-6 py-3.5">Diupload Oleh</th>
-                        <th class="px-6 py-3.5">Total Baris</th>
-                        <th class="px-6 py-3.5">Status</th>
-                        <th class="px-6 py-3.5">Waktu Unggah</th>
-                        <th class="px-6 py-3.5 text-right">Aksi</th>
-                    </tr>
-                </thead>
+            <table class="app-table w-full text-left {{ $batches->isNotEmpty() ? 'min-w-[1050px]' : '' }}">
+                @if($batches->isNotEmpty())
+                    <thead class="bg-slate-50 font-semibold uppercase tracking-wider text-slate-600">
+                        <tr>
+                            <th class="px-6 py-3.5">Nama Berkas Excel</th>
+                            <th class="px-6 py-3.5">Profil Data</th>
+                            <th class="px-6 py-3.5">Diupload Oleh</th>
+                            <th class="px-6 py-3.5">Total Baris</th>
+                            <th class="px-6 py-3.5">Status</th>
+                            <th class="px-6 py-3.5">Waktu Unggah</th>
+                            <th class="px-6 py-3.5 text-right">Aksi</th>
+                        </tr>
+                    </thead>
+                @endif
                 <tbody class="divide-y divide-slate-200 text-slate-700">
                     @forelse($batches as $batch)
                         <tr class="hover:bg-slate-50/75 transition-colors">
@@ -105,19 +107,23 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-6 py-12 text-center">
-                                <svg class="mx-auto h-12 w-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                </svg>
-                                <p class="mt-3 text-sm font-semibold text-slate-700">Belum ada berkas validasi yang diunggah</p>
-                                <p class="text-xs text-slate-500 mt-1">Mulai dengan mengunduh template data dummy dan mengunggahnya untuk pengujian.</p>
-                                <div class="mt-4 flex items-center justify-center space-x-3">
-                                    <a href="{{ route('batches.dummy-template') }}" class="px-3.5 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700">
-                                        Unduh Data Dummy
-                                    </a>
-                                    <a href="{{ route('batches.create') }}" class="px-3.5 py-1.5 bg-blue-700 text-white rounded-lg text-xs font-semibold hover:bg-blue-800">
-                                        Unggah Berkas Excel
-                                    </a>
+                            <td colspan="7" class="p-0">
+                                <div class="flex min-h-64 items-center justify-center px-4 py-8 text-center sm:px-6">
+                                    <div class="flex max-w-xl flex-col items-center">
+                                        <svg class="h-12 w-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
+                                        <p class="mt-3 text-sm font-semibold text-slate-700">Belum ada berkas validasi yang diunggah</p>
+                                        <p class="mt-1 text-xs text-slate-500">Mulai dengan mengunduh template data dummy dan mengunggahnya untuk pengujian.</p>
+                                        <div class="mt-4 flex flex-col items-stretch justify-center gap-2 sm:flex-row sm:items-center">
+                                            <a href="{{ route('batches.dummy-template') }}" class="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700">
+                                                Unduh Data Dummy
+                                            </a>
+                                            <a href="{{ route('batches.create') }}" class="rounded-lg bg-blue-700 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-blue-800">
+                                                Unggah Berkas Excel
+                                            </a>
+                                        </div>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
