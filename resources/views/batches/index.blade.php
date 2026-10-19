@@ -79,7 +79,7 @@
                                 @endif
                             </td>
                             <td class="px-6 py-4 text-slate-500 whitespace-nowrap">
-                                {{ $batch->created_at->format('d/m/Y H:i') }}
+                                {{ $batch->created_at->copy()->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }} WIB
                             </td>
                             <td class="px-6 py-4 text-right space-x-2 whitespace-nowrap">
                                 <div class="flex flex-wrap justify-end gap-x-3 gap-y-2">

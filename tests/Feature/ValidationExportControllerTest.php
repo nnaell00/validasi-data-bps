@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\ValidationBatch;
 use App\Models\ValidationProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Testing\TestResponse;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
@@ -22,6 +23,7 @@ class ValidationExportControllerTest extends TestCase
 
     public function test_exports_corrected_data_and_two_sheet_report_with_source_columns_preserved(): void
     {
+        $this->travelTo(Carbon::parse('2026-10-19 06:31:54', 'UTC'));
         $petugas = $this->createUser('petugas', 'petugas@bps.go.id');
         $batch = $this->createBatch($petugas);
         $headers = $this->headers();
@@ -93,7 +95,7 @@ class ValidationExportControllerTest extends TestCase
         $this->assertSame('Petugas Uji', $auditSheet->getCell('B2')->getValue());
         $this->assertSame('1', $auditSheet->getCell('C2')->getValue());
         $this->assertSame('NIP', $auditSheet->getCell('D2')->getValue());
-        $this->assertSame($auditLog->created_at->format('Y-m-d H:i:s'), $auditSheet->getCell('A2')->getValue());
+        $this->assertSame('19/10/2026 13:31 WIB', $auditSheet->getCell('A2')->getValue());
         $this->assertSame('000123456789012345', $auditSheet->getCell('E2')->getValue());
         $this->assertSame('000987654321098765', $auditSheet->getCell('F2')->getValue());
         $this->assertSame(DataType::TYPE_STRING, $auditSheet->getCell('E2')->getDataType());

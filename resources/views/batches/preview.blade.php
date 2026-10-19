@@ -19,7 +19,7 @@
                 Profil: <strong class="text-slate-800">{{ $batch->profile->name }}</strong> &bull; 
                 Total Data: <strong class="text-slate-800">{{ $batch->total_rows }} Baris Pegawai</strong> &bull; 
                 Diupload oleh: <strong class="text-slate-800">{{ $batch->user->name }}</strong> &bull; 
-                Waktu: {{ $batch->created_at->format('d M Y H:i') }} WIB
+                Waktu: {{ $batch->created_at->copy()->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }} WIB
             </p>
         </div>
 

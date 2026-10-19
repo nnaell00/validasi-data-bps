@@ -69,6 +69,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Display Timezone
+    |--------------------------------------------------------------------------
+    |
+    | Keep application timestamps in UTC and convert them only when presenting
+    | dates to users in the WIB timezone.
+    |
+    */
+
+    'display_timezone' => 'Asia/Jakarta',
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

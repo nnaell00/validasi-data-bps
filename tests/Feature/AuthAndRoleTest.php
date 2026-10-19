@@ -50,10 +50,17 @@ class AuthAndRoleTest extends TestCase
         $dashResponse = $this->actingAs($admin)->get('/dashboard');
         $dashResponse->assertStatus(200);
         $dashResponse->assertSee('Administrator');
+        $dashResponse->assertSee('Profil & Aturan');
+        $dashResponse->assertSee('Pengguna');
+        $dashResponse->assertSee(route('profiles.index'), false);
+        $dashResponse->assertSee(route('users.index'), false);
 
         $usersResponse = $this->actingAs($admin)->get('/users');
         $usersResponse->assertStatus(200);
         $usersResponse->assertSee('Manajemen Akun Pengguna');
+
+        $profilesResponse = $this->actingAs($admin)->get('/profiles');
+        $profilesResponse->assertOk();
     }
 
     public function test_petugas_can_login_but_cannot_access_user_management(): void
@@ -77,10 +84,17 @@ class AuthAndRoleTest extends TestCase
         $dashResponse = $this->actingAs($petugas)->get('/dashboard');
         $dashResponse->assertStatus(200);
         $dashResponse->assertSee('Petugas BPS');
+        $dashResponse->assertSee('Unggah Excel');
+        $dashResponse->assertSee('Riwayat Validasi');
+        $dashResponse->assertDontSee(route('profiles.index'), false);
+        $dashResponse->assertDontSee(route('users.index'), false);
 
         // Petugas dilarang mengakses modul kelola user milik Admin
         $usersResponse = $this->actingAs($petugas)->get('/users');
         $usersResponse->assertStatus(403);
+
+        $profilesResponse = $this->actingAs($petugas)->get('/profiles');
+        $profilesResponse->assertForbidden();
     }
 
     public function test_inactive_user_cannot_login(): void

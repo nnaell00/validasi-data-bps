@@ -83,7 +83,9 @@ class ValidationBatchExcelExporter
 
         foreach ($auditLogs as $rowOffset => $auditLog) {
             $values = [
-                $auditLog->created_at?->format('Y-m-d H:i:s') ?? '',
+                $auditLog->created_at === null
+                    ? ''
+                    : $auditLog->created_at->copy()->timezone(config('app.display_timezone'))->format('d/m/Y H:i').' WIB',
                 $auditLog->user?->name ?? '',
                 $auditLog->row?->row_number === null ? '' : (string) $auditLog->row->row_number,
                 $auditLog->column_name ?? '',

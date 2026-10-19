@@ -78,4 +78,99 @@ html {
     .app-status-error {
         @apply inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-800;
     }
+
+    .sidebar-link {
+        @apply flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium text-blue-100/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70;
+    }
+
+    .sidebar-link:hover {
+        @apply bg-white/10 text-white;
+    }
+
+    .sidebar-link-active {
+        @apply bg-white text-bps-navy shadow-sm;
+    }
+
+    .sidebar-link-active:hover {
+        @apply bg-white text-bps-navy;
+    }
+
+    .sidebar-link-active:focus-visible {
+        @apply ring-bps-orange;
+    }
+}
+
+#app-sidebar {
+    transform: translateX(-100%);
+}
+
+#app-shell.sidebar-open #app-sidebar {
+    transform: translateX(0);
+}
+
+#sidebar-backdrop {
+    display: none;
+}
+
+#app-shell.sidebar-open #sidebar-backdrop {
+    display: block;
+}
+
+@media (min-width: 64rem) {
+    #app-shell {
+        padding-left: 16rem;
+    }
+
+    #app-sidebar {
+        transform: translateX(0);
+    }
+
+    #app-shell.sidebar-collapsed {
+        padding-left: 5rem;
+    }
+
+    #app-shell.sidebar-collapsed #app-sidebar {
+        width: 5rem;
+    }
+
+    #app-shell.sidebar-collapsed #app-sidebar > div:first-child {
+        min-height: 7rem;
+        flex-direction: column;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.75rem 0;
+    }
+
+    #app-shell.sidebar-collapsed .sidebar-brand {
+        flex: none;
+    }
+
+    #app-shell.sidebar-collapsed .sidebar-brand > div {
+        justify-content: center;
+        gap: 0;
+    }
+
+    #app-shell.sidebar-collapsed .sidebar-brand > div > div:last-child,
+    #app-shell.sidebar-collapsed .sidebar-section-label,
+    #app-shell.sidebar-collapsed .sidebar-link-label,
+    #app-shell.sidebar-collapsed .sidebar-account-copy {
+        display: none;
+    }
+
+    #app-shell.sidebar-collapsed .sidebar-link,
+    #app-shell.sidebar-collapsed .sidebar-logout {
+        justify-content: center;
+        padding-right: 0.75rem;
+        padding-left: 0.75rem;
+    }
+
+    #app-shell.sidebar-collapsed .sidebar-account {
+        justify-content: center;
+        padding-right: 0;
+        padding-left: 0;
+    }
+
+    #app-shell.sidebar-collapsed #desktop-sidebar-toggle svg {
+        transform: rotate(180deg);
+    }
 }

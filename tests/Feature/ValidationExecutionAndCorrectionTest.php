@@ -10,6 +10,7 @@ use App\Models\ValidationProfile;
 use App\Models\ValidationRule;
 use App\Services\ExcelDataParser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -240,6 +241,7 @@ class ValidationExecutionAndCorrectionTest extends TestCase
             'needs_confirmation' => true,
             'is_active' => true,
         ]);
+        $this->travelTo(Carbon::parse('2026-10-19 06:32:20', 'UTC'));
 
         // Buat batch dengan 2 baris (1 valid, 1 anomali NIP)
         $batch = ValidationBatch::create([
@@ -318,6 +320,11 @@ class ValidationExecutionAndCorrectionTest extends TestCase
             'new_value' => '199203152015022002',
             'action' => 'correction',
         ]);
+
+        $auditResponse = $this->actingAs($petugas)->get(route('validation.audit', $batch));
+
+        $auditResponse->assertOk();
+        $auditResponse->assertSee('19/10/2026 13:32 WIB');
 
         // 4. Petugas Menjalankan Validasi Ulang (Re-validate)
         $revalResponse = $this->actingAs($petugas)->post("/batches/{$batch->id}/revalidate");

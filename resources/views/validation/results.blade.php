@@ -18,7 +18,7 @@
             <p class="text-xs text-slate-500 mt-1">
                 Profil: <strong class="text-slate-800">{{ $batch->profile->name }}</strong> &bull; 
                 Total Data: <strong class="text-slate-800">{{ $stats['total_rows'] }} Baris</strong> &bull; 
-                Diunggah: {{ $batch->created_at->format('d/m/Y H:i') }} WIB
+                Diunggah: {{ $batch->created_at->copy()->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }} WIB
             </p>
         </div>
 

@@ -41,7 +41,7 @@
                 <tbody class="divide-y divide-slate-200 text-slate-700">
                     @forelse($auditLogs as $auditLog)
                         <tr>
-                            <td class="whitespace-nowrap px-4 py-4 text-slate-600">{{ $auditLog->created_at->format('d/m/Y H:i:s') }}</td>
+                            <td class="whitespace-nowrap px-4 py-4 text-slate-600">{{ $auditLog->created_at->copy()->timezone(config('app.display_timezone'))->format('d/m/Y H:i') }} WIB</td>
                             <td class="px-4 py-4 font-medium text-slate-900">{{ $auditLog->user?->name ?? '-' }}</td>
                             <td class="px-4 py-4">{{ $auditLog->row ? '#'.$auditLog->row->row_number : '-' }}</td>
                             <td class="px-4 py-4 font-semibold">{{ $auditLog->column_name ?? '-' }}</td>

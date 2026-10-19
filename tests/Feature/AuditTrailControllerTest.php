@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\ValidationBatch;
 use App\Models\ValidationProfile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -28,7 +29,7 @@ class AuditTrailControllerTest extends TestCase
             'original_data' => ['000000000000000001'],
             'current_data' => ['000000000000000002'],
         ]);
-        $changedAt = now()->subMinutes(3);
+        $changedAt = Carbon::parse('2026-10-19 06:31:54', 'UTC');
         $auditLog = AuditLog::create([
             'validation_batch_id' => $batch->id,
             'batch_row_id' => $row->id,
@@ -44,7 +45,7 @@ class AuditTrailControllerTest extends TestCase
         $ownerResponse = $this->actingAs($owner)->get(route('validation.audit', $batch));
 
         $ownerResponse->assertOk();
-        $ownerResponse->assertSee($changedAt->format('d/m/Y H:i:s'));
+        $ownerResponse->assertSee('19/10/2026 13:31 WIB');
         $ownerResponse->assertSee('Petugas Uji');
         $ownerResponse->assertSee('#1');
         $ownerResponse->assertSee('NIP');

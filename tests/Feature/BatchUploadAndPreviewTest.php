@@ -3,10 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\ValidationBatch;
 use App\Models\ValidationProfile;
 use App\Services\DummyDataGenerator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -45,9 +47,10 @@ class BatchUploadAndPreviewTest extends TestCase
             'slug' => 'data-kepegawaian',
             'is_active' => true,
         ]);
+        $this->travelTo(Carbon::parse('2026-10-19 06:31:00', 'UTC'));
 
         // Hasilkan file dummy Excel nyata menggunakan DummyDataGenerator
-        $generator = new DummyDataGenerator();
+        $generator = new DummyDataGenerator;
         $dummyPath = $generator->generate();
 
         $uploadedFile = new UploadedFile(
@@ -72,12 +75,19 @@ class BatchUploadAndPreviewTest extends TestCase
         $this->assertDatabaseCount('batch_rows', 15);
 
         // Akses halaman preview
-        $batch = \App\Models\ValidationBatch::first();
+        $batch = ValidationBatch::first();
         $previewResponse = $this->actingAs($user)->get("/batches/{$batch->id}/preview");
 
         $previewResponse->assertStatus(200);
         $previewResponse->assertSee('Pratinjau Data Mentah');
         $previewResponse->assertSee('Ahmad Fauzi');
         $previewResponse->assertSee('Jalankan Validasi Sekarang');
+        $previewResponse->assertSee('19/10/2026 13:31 WIB');
+        $this->assertSame('2026-10-19 06:31:00', $batch->refresh()->created_at->format('Y-m-d H:i:s'));
+
+        $historyResponse = $this->actingAs($user)->get(route('batches.index'));
+
+        $historyResponse->assertOk();
+        $historyResponse->assertSee('19/10/2026 13:31 WIB');
     }
 }
