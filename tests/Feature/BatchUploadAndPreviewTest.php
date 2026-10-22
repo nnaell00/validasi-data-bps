@@ -96,6 +96,7 @@ class BatchUploadAndPreviewTest extends TestCase
 
         // Akses halaman preview
         $batch = ValidationBatch::first();
+        $this->assertSame('198801152011011002', $batch->rows()->first()->current_data[2]);
         $previewResponse = $this->actingAs($user)->get("/batches/{$batch->id}/preview");
 
         $previewResponse->assertStatus(200);

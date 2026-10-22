@@ -43,6 +43,7 @@ class ValidationExecutionController extends Controller
 
         // Eksekusi pemindaian mesin validasi
         $result = $engine->validate($profile, $rowsData);
+        $this->persistNormalizedNips($result['normalized_nips'], $rowsMap);
 
         // Reset status anomali pada semua baris
         BatchRow::where('validation_batch_id', $batch->id)->update(['has_anomalies' => false]);
@@ -275,6 +276,7 @@ class ValidationExecutionController extends Controller
         }
 
         $result = $engine->validate($profile, $rowsData);
+        $this->persistNormalizedNips($result['normalized_nips'], $rowsMap);
 
         // Reset status has_anomalies
         BatchRow::where('validation_batch_id', $batch->id)->update(['has_anomalies' => false]);
@@ -328,5 +330,31 @@ class ValidationExecutionController extends Controller
 
         return redirect()->route('validation.results', $batch)
             ->with('info', "Validasi ulang selesai: Masih tersisa {$result['anomalies_count']} anomali pada {$result['anomalous_rows_count']} baris yang memerlukan perbaikan.");
+    }
+
+    /**
+     * Persist normalized NIPs without changing the original imported data.
+     *
+     * @param  array<int, array<int|string, string>>  $normalizedNips
+     * @param  array<int, BatchRow>  $rowsMap
+     */
+    private function persistNormalizedNips(array $normalizedNips, array $rowsMap): void
+    {
+        foreach ($normalizedNips as $rowIndex => $nipValues) {
+            $batchRow = $rowsMap[$rowIndex] ?? null;
+
+            if ($batchRow === null) {
+                continue;
+            }
+
+            $currentData = $batchRow->current_data;
+            foreach ($nipValues as $columnKey => $normalizedNip) {
+                $currentData[$columnKey] = $normalizedNip;
+            }
+
+            if ($batchRow->current_data !== $currentData) {
+                $batchRow->update(['current_data' => $currentData]);
+            }
+        }
     }
 }

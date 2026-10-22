@@ -335,4 +335,84 @@ class ValidationExecutionAndCorrectionTest extends TestCase
         $this->assertEquals(0, $batch->summary['total_anomalies']);
         $this->assertEquals(2, $batch->summary['valid_rows']);
     }
+
+    public function test_combined_nips_are_normalized_for_validation_and_revalidation_without_changing_source_data(): void
+    {
+        $petugas = User::create([
+            'name' => 'Petugas NIP Gabungan',
+            'email' => 'petugas-nip-gabungan@bps.go.id',
+            'role' => 'petugas',
+            'password' => Hash::make('password'),
+            'is_active' => true,
+        ]);
+        $profile = ValidationProfile::create([
+            'name' => 'Data Kepegawaian',
+            'slug' => 'data-kepegawaian-kandidat',
+            'is_active' => true,
+        ]);
+        ValidationRule::create([
+            'validation_profile_id' => $profile->id,
+            'column_name' => 'NIP',
+            'column_index' => 2,
+            'data_type' => 'string',
+            'is_required' => true,
+            'validation_type' => 'regex',
+            'parameters' => ['pattern' => '/^[0-9]{18}$/D'],
+            'error_message' => 'NIP harus terdiri tepat dari 18 digit angka.',
+            'needs_confirmation' => true,
+            'confirmation_note' => 'NIP tidak sesuai format yang didukung. Verifikasi nilai sumber sebelum menentukan perbaikan.',
+            'is_active' => true,
+        ]);
+        $batch = ValidationBatch::create([
+            'user_id' => $petugas->id,
+            'validation_profile_id' => $profile->id,
+            'file_name' => 'data_nip_gabungan_sintetis.xlsx',
+            'file_path' => 'synthetic/data_nip_gabungan.xlsx',
+            'total_rows' => 2,
+            'status' => 'uploaded',
+            'headers' => ['No.', 'Nama', 'NIP'],
+        ]);
+        $sourceNips = [
+            '340015525 197601101997122001',
+            '340015525197601101997122001',
+        ];
+        $rows = [];
+
+        foreach ($sourceNips as $rowIndex => $sourceNip) {
+            $rows[] = BatchRow::create([
+                'validation_batch_id' => $batch->id,
+                'row_index' => $rowIndex,
+                'row_number' => $rowIndex + 1,
+                'original_data' => [(string) ($rowIndex + 1), 'Pegawai Sintetis', $sourceNip],
+                'current_data' => [(string) ($rowIndex + 1), 'Pegawai Sintetis', $sourceNip],
+            ]);
+        }
+
+        $this->actingAs($petugas)
+            ->post(route('validation.execute', $batch))
+            ->assertRedirect(route('validation.results', $batch));
+
+        $this->assertSame('completed', $batch->refresh()->status);
+        $this->assertSame(0, $batch->summary['total_anomalies']);
+        $this->assertDatabaseCount('row_anomalies', 0);
+
+        foreach ($rows as $rowIndex => $row) {
+            $row->refresh();
+            $this->assertSame($sourceNips[$rowIndex], $row->original_data[2]);
+            $this->assertSame('197601101997122001', $row->current_data[2]);
+        }
+
+        $this->post(route('validation.revalidate', $batch))
+            ->assertRedirect(route('validation.results', $batch));
+
+        $this->assertSame('completed', $batch->refresh()->status);
+        $this->assertSame(0, $batch->summary['total_anomalies']);
+        $this->assertDatabaseCount('row_anomalies', 0);
+
+        foreach ($rows as $rowIndex => $row) {
+            $row->refresh();
+            $this->assertSame($sourceNips[$rowIndex], $row->original_data[2]);
+            $this->assertSame('197601101997122001', $row->current_data[2]);
+        }
+    }
 }

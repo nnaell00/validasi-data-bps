@@ -23,6 +23,7 @@ class ValidationEngine
         $anomalies = [];
         $anomaliesByRow = [];
         $rowsWithAnomalies = [];
+        $normalizedNips = [];
 
         foreach ($rows as $rowIndex => $row) {
             $rowNumber = $rowIndex + 1; // Baris data manusiawi (1-based)
@@ -52,10 +53,29 @@ class ValidationEngine
                     continue;
                 }
 
+                $valueToValidate = $trimmedValue;
+                $isNipColumn = strtoupper(trim($rule->column_name)) === 'NIP';
+
+                if ($isNipColumn) {
+                    $normalizedNip = $this->normalizeNipValue($cellValue);
+
+                    if ($normalizedNip !== null) {
+                        $valueToValidate = $normalizedNip;
+                        $rowKey = array_key_exists($rule->column_index, $row)
+                            ? $rule->column_index
+                            : $rule->column_name;
+                        $normalizedNips[$rowIndex][$rowKey] = $normalizedNip;
+                    }
+                }
+
                 // 2. Cek Format & Validasi Berdasarkan validation_type
-                $isValid = $this->evaluateRule($rule, $trimmedValue);
+                $isValid = $this->evaluateRule($rule, $valueToValidate);
 
                 if (! $isValid) {
+                    $errorMessage = $isNipColumn
+                        ? $this->nipErrorMessage($cellValue)
+                        : ($rule->error_message ?: "Nilai pada kolom '{$rule->column_name}' tidak valid.");
+
                     $this->recordAnomaly(
                         $anomalies,
                         $anomaliesByRow,
@@ -64,7 +84,7 @@ class ValidationEngine
                         $rowNumber,
                         $rule,
                         $cellValue,
-                        $rule->error_message ?: "Nilai pada kolom '{$rule->column_name}' tidak valid."
+                        $errorMessage
                     );
                 }
             }
@@ -81,6 +101,7 @@ class ValidationEngine
             'anomalous_rows_count' => $totalAnomalousRows,
             'anomalies' => $anomalies,
             'anomalies_by_row' => $anomaliesByRow,
+            'normalized_nips' => $normalizedNips,
         ];
     }
 
@@ -112,6 +133,10 @@ class ValidationEngine
                 $pattern = $rule->parameters['pattern'] ?? null;
                 if (! $pattern) {
                     return true;
+                }
+
+                if (strtoupper(trim($rule->column_name)) === 'NIP') {
+                    $strValue = preg_replace('/\s+/', '', $strValue) ?? $strValue;
                 }
 
                 return (bool) preg_match($pattern, $strValue);
@@ -162,6 +187,44 @@ class ValidationEngine
 
                 return true;
         }
+    }
+
+    private function normalizeNipValue(mixed $value): ?string
+    {
+        if (! is_string($value) && ! is_int($value)) {
+            return null;
+        }
+
+        $digits = preg_replace('/\s+/', '', (string) $value);
+        if ($digits === null || ! preg_match('/^[0-9]+$/D', $digits)) {
+            return null;
+        }
+
+        if (preg_match('/^[0-9]{18}$/D', $digits)) {
+            return $digits;
+        }
+
+        if (preg_match('/^[0-9]{9}[0-9]{18}$/D', $digits)) {
+            return substr($digits, 9);
+        }
+
+        return null;
+    }
+
+    private function nipErrorMessage(mixed $value): string
+    {
+        if (! is_string($value) && ! is_int($value)) {
+            return 'Format NIP tidak valid. Pastikan NIP disimpan sebagai teks agar digit tidak berubah.';
+        }
+
+        $digits = preg_replace('/\s+/', '', (string) $value);
+
+        if ($digits === null || ! preg_match('/^[0-9]+$/D', $digits)) {
+            return 'Format NIP tidak valid: nilai hanya boleh berisi digit angka dan spasi.';
+        }
+
+        return 'Jumlah digit NIP tidak valid ('.strlen($digits)
+            .'). Gunakan 18 digit NIP baru atau gabungan tepat 27 digit (9 digit NIP lama + 18 digit NIP baru).';
     }
 
     /**
