@@ -30,9 +30,6 @@ class ValidationExecutionController extends Controller
             return back()->with('error', 'Profil validasi tidak aktif atau tidak ditemukan.');
         }
 
-        // Hapus anomali sebelumnya jika ada untuk perhitungan ulang
-        RowAnomaly::where('validation_batch_id', $batch->id)->delete();
-
         // Kumpulkan data baris (menggunakan current_data)
         $rowsData = [];
         $rowsMap = [];
@@ -43,53 +40,13 @@ class ValidationExecutionController extends Controller
 
         // Eksekusi pemindaian mesin validasi
         $result = $engine->validate($profile, $rowsData);
-        $this->persistNormalizedNips($result['normalized_nips'], $rowsMap);
-
-        // Reset status anomali pada semua baris
-        BatchRow::where('validation_batch_id', $batch->id)->update(['has_anomalies' => false]);
-
-        // Simpan setiap anomali yang ditemukan
-        foreach ($result['anomalies'] as $anomalyItem) {
-            $rowIndex = $anomalyItem['row_index'];
-            $batchRow = $rowsMap[$rowIndex] ?? null;
-
-            if ($batchRow) {
-                RowAnomaly::create([
-                    'validation_batch_id' => $batch->id,
-                    'batch_row_id' => $batchRow->id,
-                    'column_name' => $anomalyItem['column_name'],
-                    'column_index' => $anomalyItem['column_index'],
-                    'invalid_value' => is_scalar($anomalyItem['original_value']) ? (string) $anomalyItem['original_value'] : json_encode($anomalyItem['original_value']),
-                    'error_message' => $anomalyItem['error_message'],
-                    'needs_confirmation' => $anomalyItem['needs_confirmation'] ?? false,
-                    'confirmation_note' => $anomalyItem['confirmation_note'] ?? null,
-                    'is_resolved' => false,
-                ]);
-
-                $batchRow->update(['has_anomalies' => true]);
-            }
-        }
-
-        $newStatus = ($result['anomalies_count'] === 0) ? 'completed' : 'validated';
-
-        $batch->update([
-            'status' => $newStatus,
-            'summary' => [
-                'total_rows' => $result['total_rows'],
-                'valid_rows' => $result['valid_rows_count'],
-                'anomalous_rows' => $result['anomalous_rows_count'],
-                'total_anomalies' => $result['anomalies_count'],
-                'total_corrected' => $batch->rows()->where('is_corrected', true)->count(),
-            ],
-        ]);
-
-        // Catat ke audit log
-        AuditLog::create([
-            'validation_batch_id' => $batch->id,
-            'user_id' => Auth::id(),
-            'action' => 'validation',
-            'notes' => "Validasi selesai: {$result['valid_rows_count']} baris valid, {$result['anomalous_rows_count']} baris memuat anomali ({$result['anomalies_count']} kesalahan total).",
-        ]);
+        $this->persistValidationResult(
+            $batch,
+            $rowsMap,
+            $result,
+            'validation',
+            "Validasi selesai: {$result['valid_rows_count']} baris valid, {$result['anomalous_rows_count']} baris memuat anomali ({$result['anomalies_count']} kesalahan total)."
+        );
 
         return redirect()->route('validation.results', $batch)
             ->with('success', "Proses validasi selesai! {$result['valid_rows_count']} baris valid dan {$result['anomalies_count']} anomali terdeteksi.");
@@ -265,8 +222,9 @@ class ValidationExecutionController extends Controller
         $batch->load(['profile.activeRules', 'rows']);
         $profile = $batch->profile;
 
-        // Bersihkan anomali lama
-        RowAnomaly::where('validation_batch_id', $batch->id)->delete();
+        if (! $profile || ! $profile->is_active) {
+            return back()->with('error', 'Profil validasi tidak aktif atau tidak ditemukan.');
+        }
 
         $rowsData = [];
         $rowsMap = [];
@@ -276,52 +234,13 @@ class ValidationExecutionController extends Controller
         }
 
         $result = $engine->validate($profile, $rowsData);
-        $this->persistNormalizedNips($result['normalized_nips'], $rowsMap);
-
-        // Reset status has_anomalies
-        BatchRow::where('validation_batch_id', $batch->id)->update(['has_anomalies' => false]);
-
-        // Simpan anomali yang masih tersisa
-        foreach ($result['anomalies'] as $anomalyItem) {
-            $rowIndex = $anomalyItem['row_index'];
-            $batchRow = $rowsMap[$rowIndex] ?? null;
-
-            if ($batchRow) {
-                RowAnomaly::create([
-                    'validation_batch_id' => $batch->id,
-                    'batch_row_id' => $batchRow->id,
-                    'column_name' => $anomalyItem['column_name'],
-                    'column_index' => $anomalyItem['column_index'],
-                    'invalid_value' => is_scalar($anomalyItem['original_value']) ? (string) $anomalyItem['original_value'] : json_encode($anomalyItem['original_value']),
-                    'error_message' => $anomalyItem['error_message'],
-                    'needs_confirmation' => $anomalyItem['needs_confirmation'] ?? false,
-                    'confirmation_note' => $anomalyItem['confirmation_note'] ?? null,
-                    'is_resolved' => false,
-                ]);
-
-                $batchRow->update(['has_anomalies' => true]);
-            }
-        }
-
-        $newStatus = ($result['anomalies_count'] === 0) ? 'completed' : 'validated';
-
-        $batch->update([
-            'status' => $newStatus,
-            'summary' => [
-                'total_rows' => $result['total_rows'],
-                'valid_rows' => $result['valid_rows_count'],
-                'anomalous_rows' => $result['anomalous_rows_count'],
-                'total_anomalies' => $result['anomalies_count'],
-                'total_corrected' => $batch->rows()->where('is_corrected', true)->count(),
-            ],
-        ]);
-
-        AuditLog::create([
-            'validation_batch_id' => $batch->id,
-            'user_id' => Auth::id(),
-            'action' => 'revalidation',
-            'notes' => "Validasi ulang selesai: {$result['valid_rows_count']} baris bersih, {$result['anomalies_count']} anomali tersisa.",
-        ]);
+        $this->persistValidationResult(
+            $batch,
+            $rowsMap,
+            $result,
+            'revalidation',
+            "Validasi ulang selesai: {$result['valid_rows_count']} baris bersih, {$result['anomalies_count']} anomali tersisa."
+        );
 
         if ($result['anomalies_count'] === 0) {
             return redirect()->route('validation.results', $batch)
@@ -330,6 +249,89 @@ class ValidationExecutionController extends Controller
 
         return redirect()->route('validation.results', $batch)
             ->with('info', "Validasi ulang selesai: Masih tersisa {$result['anomalies_count']} anomali pada {$result['anomalous_rows_count']} baris yang memerlukan perbaikan.");
+    }
+
+    /**
+     * Replace persisted validation results atomically using the latest engine output.
+     *
+     * @param  array<int, BatchRow>  $rowsMap
+     * @param  array{
+     *     total_rows: int,
+     *     valid_rows_count: int,
+     *     anomalies_count: int,
+     *     anomalous_rows_count: int,
+     *     anomalies: array<int, array{
+     *         row_index: int,
+     *         column_name: string,
+     *         column_index: int,
+     *         original_value: mixed,
+     *         error_message: string,
+     *         needs_confirmation?: bool,
+     *         confirmation_note?: ?string
+     *     }>,
+     *     normalized_nips: array<int, array<int|string, string>>
+     * }  $result
+     */
+    private function persistValidationResult(
+        ValidationBatch $batch,
+        array $rowsMap,
+        array $result,
+        string $action,
+        string $notes
+    ): void {
+        DB::transaction(function () use ($batch, $rowsMap, $result, $action, $notes): void {
+            RowAnomaly::where('validation_batch_id', $batch->id)->delete();
+            $this->persistNormalizedNips($result['normalized_nips'], $rowsMap);
+
+            $anomalousRows = [];
+            foreach ($result['anomalies'] as $anomalyItem) {
+                $rowIndex = $anomalyItem['row_index'];
+                $batchRow = $rowsMap[$rowIndex] ?? null;
+
+                if ($batchRow === null) {
+                    throw new \LogicException("Hasil validasi merujuk ke baris yang tidak ditemukan: {$rowIndex}.");
+                }
+
+                $anomalousRows[$rowIndex] = true;
+                RowAnomaly::create([
+                    'validation_batch_id' => $batch->id,
+                    'batch_row_id' => $batchRow->id,
+                    'column_name' => $anomalyItem['column_name'],
+                    'column_index' => $anomalyItem['column_index'],
+                    'invalid_value' => is_scalar($anomalyItem['original_value'])
+                        ? (string) $anomalyItem['original_value']
+                        : json_encode($anomalyItem['original_value']),
+                    'error_message' => $anomalyItem['error_message'],
+                    'needs_confirmation' => $anomalyItem['needs_confirmation'] ?? false,
+                    'confirmation_note' => $anomalyItem['confirmation_note'] ?? null,
+                    'is_resolved' => false,
+                ]);
+            }
+
+            foreach ($rowsMap as $rowIndex => $batchRow) {
+                $batchRow->update([
+                    'has_anomalies' => isset($anomalousRows[$rowIndex]),
+                ]);
+            }
+
+            $batch->update([
+                'status' => $result['anomalies_count'] === 0 ? 'completed' : 'validated',
+                'summary' => [
+                    'total_rows' => $result['total_rows'],
+                    'valid_rows' => $result['valid_rows_count'],
+                    'anomalous_rows' => $result['anomalous_rows_count'],
+                    'total_anomalies' => $result['anomalies_count'],
+                    'total_corrected' => $batch->rows()->where('is_corrected', true)->count(),
+                ],
+            ]);
+
+            AuditLog::create([
+                'validation_batch_id' => $batch->id,
+                'user_id' => Auth::id(),
+                'action' => $action,
+                'notes' => $notes,
+            ]);
+        });
     }
 
     /**
