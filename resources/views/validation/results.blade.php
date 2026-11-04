@@ -94,9 +94,19 @@
                 </div>
 
                 <div class="rounded-xl border border-blue-200 bg-blue-50/40 p-4">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-blue-800">Mendekati Usia Pensiun</span>
-                    <div class="mt-1 text-lg font-bold text-blue-900">Tidak dihitung</div>
-                    <span class="text-xs text-blue-800">{{ $informationSummary['retirement']['message'] }}</span>
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-blue-800">Pengingat Pensiun</span>
+                    @if($informationSummary['retirement']['available'])
+                        <div class="mt-1 text-2xl font-black text-blue-900">
+                            {{ array_sum(array_column($informationSummary['retirement']['categories'], 'count')) }}
+                        </div>
+                        <span class="text-xs text-blue-800">Baris memiliki nilai pengingat; batas usia pensiun tidak diasumsikan</span>
+                    @elseif($informationSummary['retirement']['ambiguous'])
+                        <div class="mt-1 text-sm font-bold text-amber-800">Header ganda</div>
+                        <span class="text-xs text-amber-800">Pemetaan kolom pengingat pensiun tidak dapat dipastikan</span>
+                    @else
+                        <div class="mt-1 text-sm font-bold text-slate-600">Kolom tidak tersedia</div>
+                        <span class="text-xs text-slate-600">Tidak ada alias Pengingat Pensiun pada header</span>
+                    @endif
                 </div>
             </div>
 
@@ -104,7 +114,9 @@
                 <div class="app-card p-4">
                     <h3 class="text-sm font-bold text-slate-800">Distribusi Jenis Kelamin</h3>
                     @if(! $informationSummary['gender']['available'])
-                        <p class="mt-2 text-xs text-slate-500">Kolom jenis kelamin tidak tersedia pada file ini.</p>
+                        <p class="mt-2 text-xs text-slate-500">
+                            {{ $informationSummary['gender']['ambiguous'] ? 'Header jenis kelamin ganda; kategori tidak dapat dipetakan secara aman.' : 'Kolom jenis kelamin tidak tersedia pada file ini.' }}
+                        </p>
                     @else
                         @if($informationSummary['gender']['classified_count'] > 0)
                             <div class="mt-3 grid grid-cols-2 gap-3">
@@ -151,53 +163,89 @@
                     @endif
                 </div>
 
-                <div class="app-card p-4">
+                <div class="app-card min-w-0 p-4">
                     <h3 class="text-sm font-bold text-slate-800">Distribusi Golongan</h3>
                     @if(! $informationSummary['rank']['available'])
-                        <p class="mt-2 text-xs text-slate-500">Kolom golongan akhir tidak tersedia pada file ini.</p>
+                        <p class="mt-2 text-xs text-slate-500">
+                            {{ $informationSummary['rank']['ambiguous'] ? 'Beberapa header dikenali sebagai golongan; tidak ada kolom yang dipilih.' : 'Kolom golongan tidak tersedia pada file ini.' }}
+                        </p>
                     @elseif($informationSummary['rank']['categories'])
-                        <div class="mt-3 max-h-40 overflow-y-auto pr-1 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
-                            @foreach($informationSummary['rank']['categories'] as $category)
+                        <div class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
+                            @foreach(array_slice($informationSummary['rank']['categories'], 0, 8) as $category)
                                 <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-1 text-xs">
-                                    <span class="truncate text-slate-600" title="{{ $category['label'] }}">{{ $category['label'] }}</span>
-                                    <span class="font-bold text-slate-800">{{ $category['count'] }}</span>
+                                    <span class="min-w-0 break-words text-slate-600">{{ $category['label'] }}</span>
+                                    <span class="shrink-0 font-bold text-slate-800">{{ $category['count'] }}</span>
                                 </div>
                             @endforeach
                         </div>
+                        @if(count($informationSummary['rank']['categories']) > 8)
+                            <details class="mt-2 text-xs">
+                                <summary class="w-fit cursor-pointer font-semibold text-blue-700 hover:text-blue-900">
+                                    Lihat {{ count($informationSummary['rank']['categories']) - 8 }} kategori lainnya
+                                </summary>
+                                <div class="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
+                                    @foreach(array_slice($informationSummary['rank']['categories'], 8) as $category)
+                                        <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-1">
+                                            <span class="min-w-0 break-words text-slate-600">{{ $category['label'] }}</span>
+                                            <span class="shrink-0 font-bold text-slate-800">{{ $category['count'] }}</span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </details>
+                        @endif
                         <p class="mt-2 text-[11px] text-slate-500">Nilai kosong: {{ $informationSummary['rank']['missing_count'] }}.</p>
                     @else
                         <p class="mt-2 text-xs text-slate-500">Kolom ditemukan, tetapi seluruh {{ $informationSummary['rank']['missing_count'] }} nilainya kosong.</p>
                     @endif
                 </div>
 
-                <div class="app-card p-4">
+                <div class="app-card min-w-0 p-4">
                     <h3 class="text-sm font-bold text-slate-800">Distribusi Pendidikan</h3>
                     @if(! $informationSummary['education']['available'])
-                        <p class="mt-2 text-xs text-slate-500">Kolom pendidikan tidak tersedia pada file ini.</p>
+                        <p class="mt-2 text-xs text-slate-500">
+                            {{ $informationSummary['education']['ambiguous'] ? 'Beberapa header dikenali sebagai pendidikan; tidak ada kolom yang dipilih.' : 'Kolom pendidikan tidak tersedia pada file ini.' }}
+                        </p>
                     @elseif($informationSummary['education']['categories'])
-                        <div class="mt-3 max-h-40 overflow-y-auto pr-1 grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
-                            @foreach($informationSummary['education']['categories'] as $category)
+                        <div class="mt-3 grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
+                            @foreach(array_slice($informationSummary['education']['categories'], 0, 8) as $category)
                                 <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-1 text-xs">
-                                    <span class="truncate text-slate-600" title="{{ $category['label'] }}">{{ $category['label'] }}</span>
-                                    <span class="font-bold text-slate-800">{{ $category['count'] }}</span>
+                                    <span class="min-w-0 break-words text-slate-600">{{ $category['label'] }}</span>
+                                    <span class="shrink-0 font-bold text-slate-800">{{ $category['count'] }}</span>
                                 </div>
                             @endforeach
                         </div>
+                        @if(count($informationSummary['education']['categories']) > 8)
+                            <details class="mt-2 text-xs">
+                                <summary class="w-fit cursor-pointer font-semibold text-blue-700 hover:text-blue-900">
+                                    Lihat {{ count($informationSummary['education']['categories']) - 8 }} kategori lainnya
+                                </summary>
+                                <div class="mt-2 grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
+                                    @foreach(array_slice($informationSummary['education']['categories'], 8) as $category)
+                                        <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-1">
+                                            <span class="min-w-0 break-words text-slate-600">{{ $category['label'] }}</span>
+                                            <span class="shrink-0 font-bold text-slate-800">{{ $category['count'] }}</span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </details>
+                        @endif
                         <p class="mt-2 text-[11px] text-slate-500">Nilai kosong: {{ $informationSummary['education']['missing_count'] }}.</p>
                     @else
                         <p class="mt-2 text-xs text-slate-500">Kolom ditemukan, tetapi seluruh {{ $informationSummary['education']['missing_count'] }} nilainya kosong.</p>
                     @endif
                 </div>
 
-                <div class="app-card p-4">
+                <div class="app-card min-w-0 p-4">
                     <h3 class="text-sm font-bold text-slate-800">Ringkasan Usia dan Masa Kerja</h3>
-                    <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div>
+                    <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div class="min-w-0 rounded-lg border border-slate-200 bg-slate-50/70 p-3">
                             <div class="text-xs font-semibold text-slate-600">Usia</div>
                             @if(! $informationSummary['age']['available'])
-                                <p class="mt-1 text-xs text-slate-500">Kolom tanggal lahir tidak tersedia.</p>
+                                <p class="mt-2 rounded-md border border-dashed border-slate-300 bg-white p-3 text-xs text-slate-500">
+                                    {{ $informationSummary['age']['ambiguous'] ? 'Header tanggal lahir ganda; pemetaan tidak dapat dipastikan.' : 'Kolom tanggal lahir tidak tersedia.' }}
+                                </p>
                             @elseif($informationSummary['age']['count'] === 0)
-                                <p class="mt-1 text-xs text-slate-500">Tidak ada tanggal lahir yang dapat dibaca.</p>
+                                <p class="mt-2 rounded-md border border-dashed border-slate-300 bg-white p-3 text-xs text-slate-500">Tidak ada tanggal lahir yang dapat dibaca.</p>
                             @else
                                 <p class="mt-1 text-lg font-bold text-slate-800">{{ number_format($informationSummary['age']['average'], 1, ',', '.') }} tahun</p>
                                 <p class="text-[11px] text-slate-500">Rata-rata dari {{ $informationSummary['age']['count'] }} tanggal lahir yang valid.</p>
@@ -212,12 +260,14 @@
                                 <p class="mt-1 text-[11px] text-slate-500">Kosong/tidak terbaca: {{ $informationSummary['age']['unreadable_count'] }}.</p>
                             @endif
                         </div>
-                        <div>
+                        <div class="min-w-0 rounded-lg border border-slate-200 bg-slate-50/70 p-3">
                             <div class="text-xs font-semibold text-slate-600">Masa Kerja</div>
                             @if(! $informationSummary['tenure']['available'])
-                                <p class="mt-1 text-xs text-slate-500">Kolom masa kerja tidak tersedia.</p>
+                                <p class="mt-2 rounded-md border border-dashed border-slate-300 bg-white p-3 text-xs text-slate-500">
+                                    {{ $informationSummary['tenure']['ambiguous'] ? 'Header masa kerja ganda; pemetaan tidak dapat dipastikan.' : 'Kolom masa kerja tidak tersedia.' }}
+                                </p>
                             @elseif($informationSummary['tenure']['count'] === 0)
-                                <p class="mt-1 text-xs text-slate-500">Tidak ada nilai masa kerja dengan format tahun/bulan yang dapat dibaca.</p>
+                                <p class="mt-2 rounded-md border border-dashed border-slate-300 bg-white p-3 text-xs text-slate-500">Tidak ada nilai masa kerja dengan format tahun/bulan yang dapat dibaca.</p>
                             @else
                                 <p class="mt-1 text-lg font-bold text-slate-800">{{ number_format($informationSummary['tenure']['average_years'], 1, ',', '.') }} tahun</p>
                                 <p class="text-[11px] text-slate-500">Rata-rata dari {{ $informationSummary['tenure']['count'] }} nilai dengan satuan eksplisit.</p>
@@ -225,8 +275,58 @@
                             @endif
                         </div>
                     </div>
+
                 </div>
             </div>
+
+            <section class="app-card min-w-0 p-4" aria-labelledby="employee-reminders-heading">
+                <h3 id="employee-reminders-heading" class="text-sm font-bold text-slate-800">Pengingat Pensiun dan KGB</h3>
+                <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    @foreach(['retirement' => 'Pengingat Pensiun', 'kgb' => 'Pengingat KGB'] as $field => $label)
+                        <div class="min-w-0 rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+                            <div class="text-xs font-semibold text-slate-600">{{ $label }}</div>
+                            @if(! $informationSummary[$field]['available'])
+                                <p class="mt-2 rounded-md border border-dashed border-slate-300 bg-white p-3 text-xs text-slate-500">
+                                    {{ $informationSummary[$field]['ambiguous'] ? 'Header ganda; nilai tidak dapat dipetakan secara aman.' : 'Kolom tidak tersedia.' }}
+                                </p>
+                            @elseif($informationSummary[$field]['categories'])
+                                <div class="mt-2 grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
+                                    @foreach(array_slice($informationSummary[$field]['categories'], 0, 6) as $category)
+                                        <div class="flex min-w-0 justify-between gap-2 border-b border-slate-200 pb-1 text-[11px]">
+                                            <span class="min-w-0 break-words text-slate-600">{{ $category['label'] }}</span>
+                                            <span class="shrink-0 font-semibold text-slate-800">{{ $category['count'] }}</span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                                @if(count($informationSummary[$field]['categories']) > 6)
+                                    <details class="mt-2 text-xs">
+                                        <summary class="w-fit cursor-pointer font-semibold text-blue-700 hover:text-blue-900">
+                                            Lihat {{ count($informationSummary[$field]['categories']) - 6 }} nilai lainnya
+                                        </summary>
+                                        <div class="mt-2 grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
+                                            @foreach(array_slice($informationSummary[$field]['categories'], 6) as $category)
+                                                <div class="flex min-w-0 justify-between gap-2 border-b border-slate-200 pb-1 text-[11px]">
+                                                    <span class="min-w-0 break-words text-slate-600">{{ $category['label'] }}</span>
+                                                    <span class="shrink-0 font-semibold text-slate-800">{{ $category['count'] }}</span>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </details>
+                                @endif
+                                <p class="mt-2 text-[11px] text-slate-500">
+                                    Nilai tercatat: {{ array_sum(array_column($informationSummary[$field]['categories'], 'count')) }}; kosong: {{ $informationSummary[$field]['missing_count'] }}.
+                                </p>
+                            @else
+                                <p class="mt-2 rounded-md border border-dashed border-slate-300 bg-white p-3 text-xs text-slate-500">Kolom tersedia, tetapi seluruh nilainya kosong.</p>
+                                <p class="mt-2 text-[11px] text-slate-500">
+                                    Nilai tercatat: 0; kosong: {{ $informationSummary[$field]['missing_count'] }}.
+                                </p>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+                <p class="mt-3 text-[11px] text-slate-500">{{ $informationSummary['retirement']['message'] }}</p>
+            </section>
 
             <p class="text-[11px] text-slate-500">
                 Distribusi memakai data terbaru setelah koreksi. Jumlah baris valid/anomali adalah hasil validasi tersimpan; jalankan validasi ulang setelah koreksi untuk memperbaruinya.

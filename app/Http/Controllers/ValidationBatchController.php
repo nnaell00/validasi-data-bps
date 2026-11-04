@@ -7,6 +7,7 @@ use App\Models\ValidationBatch;
 use App\Models\ValidationProfile;
 use App\Services\DummyDataGenerator;
 use App\Services\ExcelDataParser;
+use App\Services\ProfileColumnMapper;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -47,8 +48,11 @@ class ValidationBatchController extends Controller
     /**
      * Memproses file Excel yang diunggah dan menyimpannya ke database.
      */
-    public function store(Request $request, ExcelDataParser $parser): RedirectResponse
-    {
+    public function store(
+        Request $request,
+        ExcelDataParser $parser,
+        ProfileColumnMapper $columnMapper,
+    ): RedirectResponse {
         $request->validate([
             'validation_profile_id' => ['required', 'exists:validation_profiles,id'],
             'file' => ['required', 'file', 'mimes:xlsx,xls', 'max:10240'], // Maksimal 10MB
@@ -63,8 +67,27 @@ class ValidationBatchController extends Controller
         $fileName = $uploadedFile->getClientOriginalName();
         $storedPath = $uploadedFile->store('excel_uploads', 'local');
 
+        $profile = ValidationProfile::findOrFail($request->integer('validation_profile_id'));
         $fullPath = Storage::disk('local')->path($storedPath);
-        $parsed = $parser->parse($fullPath);
+        $parsed = $parser->parse($fullPath, $profile->slug);
+
+        if ($parsed['header_row_index'] === null) {
+            Storage::disk('local')->delete($storedPath);
+
+            return back()->withErrors([
+                'file' => 'Baris header Data Kepegawaian tidak ditemukan. Pastikan terdapat kolom seperti Nama/NIP dan setidaknya satu kolom profil yang dikenali.',
+            ]);
+        }
+
+        $mapping = $columnMapper->resolve($profile->slug, $parsed['headers']);
+        if ($mapping['ambiguous'] !== []) {
+            Storage::disk('local')->delete($storedPath);
+            $ambiguousNames = implode(', ', array_keys($mapping['ambiguous']));
+
+            return back()->withErrors([
+                'file' => "Beberapa header memetakan ke field yang sama ({$ambiguousNames}). Hapus atau ubah salah satu kolom agar sumber data tidak dipilih secara ambigu.",
+            ]);
+        }
 
         if (empty($parsed['rows'])) {
             Storage::disk('local')->delete($storedPath);
@@ -74,7 +97,7 @@ class ValidationBatchController extends Controller
 
         $batch = ValidationBatch::create([
             'user_id' => Auth::id(),
-            'validation_profile_id' => $request->input('validation_profile_id'),
+            'validation_profile_id' => $profile->id,
             'file_name' => $fileName,
             'file_path' => $storedPath,
             'total_rows' => count($parsed['rows']),

@@ -40,7 +40,7 @@ class ValidationExecutionController extends Controller
         }
 
         // Eksekusi pemindaian mesin validasi
-        $result = $engine->validate($profile, $rowsData);
+        $result = $engine->validate($profile, $rowsData, $batch->headers ?? []);
         $this->persistValidationResult(
             $batch,
             $rowsMap,
@@ -105,6 +105,7 @@ class ValidationExecutionController extends Controller
                 ->map(static fn (BatchRow $row): array => $row->current_data ?? []);
 
             $informationSummary = $employeeDataSummary->summarize(
+                $batch->profile->slug,
                 $batch->headers ?? [],
                 $currentRows,
                 $genderOptions,
@@ -262,7 +263,7 @@ class ValidationExecutionController extends Controller
             $rowsMap[$row->row_index] = $row;
         }
 
-        $result = $engine->validate($profile, $rowsData);
+        $result = $engine->validate($profile, $rowsData, $batch->headers ?? []);
         $this->persistValidationResult(
             $batch,
             $rowsMap,

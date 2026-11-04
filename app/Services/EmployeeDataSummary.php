@@ -6,15 +6,6 @@ use DateTimeImmutable;
 
 class EmployeeDataSummary
 {
-    private const FIELD_HEADERS = [
-        'gender' => ['jeniskelamin', 'gender'],
-        'rank' => ['golakhir', 'golonganakhir', 'golongan'],
-        'education' => ['pendidikansk', 'pendidikan', 'tingkatpendidikan'],
-        'birth_date' => ['tgllahir', 'tanggallahir'],
-        'tenure' => ['mk', 'masakerja'],
-        'retirement_reminder' => ['pengingatpensiun', 'tmtpensiun'],
-    ];
-
     private const AGE_GROUPS = [
         ['label' => '< 30', 'minimum' => 0, 'maximum' => 29],
         ['label' => '30–39', 'minimum' => 30, 'maximum' => 39],
@@ -23,7 +14,10 @@ class EmployeeDataSummary
         ['label' => '60+', 'minimum' => 60, 'maximum' => null],
     ];
 
-    public function __construct(private DateValueParser $dateParser = new DateValueParser) {}
+    public function __construct(
+        private DateValueParser $dateParser = new DateValueParser,
+        private ProfileColumnMapper $columnMapper = new ProfileColumnMapper,
+    ) {}
 
     /**
      * Summarize the latest stored rows without changing or rereading the source workbook.
@@ -38,17 +32,24 @@ class EmployeeDataSummary
      *     education: array<string, mixed>,
      *     age: array<string, mixed>,
      *     tenure: array<string, mixed>,
-     *     retirement: array<string, mixed>
+     *     retirement: array<string, mixed>,
+     *     kgb: array<string, mixed>
      * }
      */
-    public function summarize(array $headers, iterable $rows, array $genderOptions = []): array
-    {
-        $columns = $this->resolveColumns($headers);
+    public function summarize(
+        string $profileSlug,
+        array $headers,
+        iterable $rows,
+        array $genderOptions = [],
+    ): array {
+        $mapping = $this->columnMapper->resolve($profileSlug, $headers);
+        $columns = $mapping['columns'];
         $genderOptions = array_fill_keys(array_map($this->normalizeValue(...), $genderOptions), true);
         $summary = [
             'total_rows' => 0,
             'gender' => [
-                'available' => $columns['gender'] !== null,
+                'available' => $columns['jenis_kelamin'] !== null,
+                'ambiguous' => isset($mapping['ambiguous']['jenis_kelamin']),
                 'male' => 0,
                 'female' => 0,
                 'classified_count' => 0,
@@ -59,26 +60,40 @@ class EmployeeDataSummary
                 'unrecognized_categories' => [],
                 'missing_count' => 0,
             ],
-            'rank' => $this->emptyDistribution($columns['rank'] !== null),
-            'education' => $this->emptyDistribution($columns['education'] !== null),
+            'rank' => $this->emptyDistribution(
+                $columns['golongan'] !== null,
+                isset($mapping['ambiguous']['golongan']),
+            ),
+            'education' => $this->emptyDistribution(
+                $columns['pendidikan'] !== null,
+                isset($mapping['ambiguous']['pendidikan']),
+            ),
             'age' => [
-                'available' => $columns['birth_date'] !== null,
+                'available' => $columns['tanggal_lahir'] !== null,
+                'ambiguous' => isset($mapping['ambiguous']['tanggal_lahir']),
                 'count' => 0,
                 'average' => null,
                 'groups' => [],
                 'unreadable_count' => 0,
             ],
             'tenure' => [
-                'available' => $columns['tenure'] !== null,
+                'available' => $columns['masa_kerja'] !== null,
+                'ambiguous' => isset($mapping['ambiguous']['masa_kerja']),
                 'count' => 0,
                 'average_years' => null,
                 'unreadable_count' => 0,
             ],
-            'retirement' => [
-                'source_column_available' => $columns['retirement_reminder'] !== null,
+            'retirement' => $this->emptyDistribution(
+                $columns['pengingat_pensiun'] !== null,
+                isset($mapping['ambiguous']['pengingat_pensiun']),
+            ) + [
                 'calculated' => false,
                 'message' => 'Tidak dihitung karena batas usia pensiun yang berlaku belum dikonfirmasi untuk profil ini.',
             ],
+            'kgb' => $this->emptyDistribution(
+                $columns['pengingat_kgb'] !== null,
+                isset($mapping['ambiguous']['pengingat_kgb']),
+            ),
         ];
 
         $maleValues = [];
@@ -86,6 +101,8 @@ class EmployeeDataSummary
         $unrecognizedGenders = [];
         $rankCategories = [];
         $educationCategories = [];
+        $retirementCategories = [];
+        $kgbCategories = [];
         $ageGroups = array_fill_keys(array_column(self::AGE_GROUPS, 'label'), 0);
         $ageTotal = 0;
         $tenureTotalMonths = 0;
@@ -94,8 +111,8 @@ class EmployeeDataSummary
         foreach ($rows as $row) {
             $summary['total_rows']++;
 
-            if ($columns['gender'] !== null) {
-                $value = $this->cellValue($row, $columns['gender'], $headers);
+            if ($columns['jenis_kelamin'] !== null) {
+                $value = $this->cellValue($row, $columns['jenis_kelamin'], $headers);
                 $label = $this->displayValue($value);
 
                 if ($label === null) {
@@ -115,25 +132,25 @@ class EmployeeDataSummary
                 }
             }
 
-            if ($columns['rank'] !== null) {
+            if ($columns['golongan'] !== null) {
                 $this->countDistributionValue(
                     $summary['rank'],
                     $rankCategories,
-                    $this->cellValue($row, $columns['rank'], $headers),
+                    $this->cellValue($row, $columns['golongan'], $headers),
                 );
             }
 
-            if ($columns['education'] !== null) {
+            if ($columns['pendidikan'] !== null) {
                 $this->countDistributionValue(
                     $summary['education'],
                     $educationCategories,
-                    $this->cellValue($row, $columns['education'], $headers),
+                    $this->cellValue($row, $columns['pendidikan'], $headers),
                 );
             }
 
-            if ($columns['birth_date'] !== null) {
+            if ($columns['tanggal_lahir'] !== null) {
                 $birthDate = $this->dateParser->parse(
-                    $this->cellValue($row, $columns['birth_date'], $headers)
+                    $this->cellValue($row, $columns['tanggal_lahir'], $headers)
                 );
 
                 if ($birthDate === null || $birthDate > $today) {
@@ -153,9 +170,9 @@ class EmployeeDataSummary
                 }
             }
 
-            if ($columns['tenure'] !== null) {
+            if ($columns['masa_kerja'] !== null) {
                 $months = $this->tenureInMonths(
-                    $this->cellValue($row, $columns['tenure'], $headers)
+                    $this->cellValue($row, $columns['masa_kerja'], $headers)
                 );
 
                 if ($months === null) {
@@ -164,6 +181,22 @@ class EmployeeDataSummary
                     $summary['tenure']['count']++;
                     $tenureTotalMonths += $months;
                 }
+            }
+
+            if ($columns['pengingat_pensiun'] !== null) {
+                $this->countDistributionValue(
+                    $summary['retirement'],
+                    $retirementCategories,
+                    $this->cellValue($row, $columns['pengingat_pensiun'], $headers),
+                );
+            }
+
+            if ($columns['pengingat_kgb'] !== null) {
+                $this->countDistributionValue(
+                    $summary['kgb'],
+                    $kgbCategories,
+                    $this->cellValue($row, $columns['pengingat_kgb'], $headers),
+                );
             }
         }
 
@@ -184,6 +217,8 @@ class EmployeeDataSummary
 
         $summary['rank']['categories'] = $this->sortedCategories($rankCategories);
         $summary['education']['categories'] = $this->sortedCategories($educationCategories);
+        $summary['retirement']['categories'] = $this->sortedCategories($retirementCategories);
+        $summary['kgb']['categories'] = $this->sortedCategories($kgbCategories);
 
         if ($summary['age']['count'] > 0) {
             $summary['age']['average'] = round($ageTotal / $summary['age']['count'], 1);
@@ -203,40 +238,14 @@ class EmployeeDataSummary
     /**
      * @return array{available: bool, categories: array<int, array{label: string, count: int}>, missing_count: int}
      */
-    private function emptyDistribution(bool $available): array
+    private function emptyDistribution(bool $available, bool $ambiguous = false): array
     {
         return [
             'available' => $available,
+            'ambiguous' => $ambiguous,
             'categories' => [],
             'missing_count' => 0,
         ];
-    }
-
-    /**
-     * @param  array<int, string>  $headers
-     * @return array<string, ?int>
-     */
-    private function resolveColumns(array $headers): array
-    {
-        $normalizedHeaders = [];
-        foreach ($headers as $index => $header) {
-            $normalizedHeaders[$index] = $this->normalizeHeader((string) $header);
-        }
-
-        $columns = [];
-        foreach (self::FIELD_HEADERS as $field => $aliases) {
-            $columns[$field] = null;
-
-            foreach ($normalizedHeaders as $index => $header) {
-                if (in_array($header, $aliases, true)) {
-                    $columns[$field] = (int) $index;
-
-                    break;
-                }
-            }
-        }
-
-        return $columns;
     }
 
     /**
@@ -300,7 +309,7 @@ class EmployeeDataSummary
 
     private function genderCategory(string $value, array $genderOptions): ?string
     {
-        $normalized = $this->normalizeHeader($value);
+        $normalized = $this->normalizeValue($value);
 
         if (! isset($genderOptions[$normalized])) {
             return null;
@@ -331,7 +340,7 @@ class EmployeeDataSummary
 
     private function normalizeValue(string $value): string
     {
-        return $this->normalizeHeader($value);
+        return mb_strtolower((string) preg_replace('/[^\p{L}\p{N}]+/u', '', trim($value)));
     }
 
     private function tenureInMonths(mixed $value): ?int

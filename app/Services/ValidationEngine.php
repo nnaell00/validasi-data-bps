@@ -7,7 +7,10 @@ use App\Models\ValidationRule;
 
 class ValidationEngine
 {
-    public function __construct(private DateValueParser $dateParser = new DateValueParser) {}
+    public function __construct(
+        private DateValueParser $dateParser = new DateValueParser,
+        private ProfileColumnMapper $columnMapper = new ProfileColumnMapper,
+    ) {}
 
     /**
      * Memvalidasi kumpulan baris data berdasarkan aturan dari ValidationProfile.
@@ -16,9 +19,10 @@ class ValidationEngine
      * @param  array  $rows  Kumpulan baris data mentah dari Excel
      * @return array Hasil analisis validasi dan daftar anomali
      */
-    public function validate(ValidationProfile $profile, array $rows): array
+    public function validate(ValidationProfile $profile, array $rows, array $headers = []): array
     {
         $activeRules = $profile->activeRules;
+        $usesProfileMapping = $headers !== [] && $profile->slug === 'data-kepegawaian';
         $anomalies = [];
         $anomaliesByRow = [];
         $rowsWithAnomalies = [];
@@ -28,8 +32,13 @@ class ValidationEngine
             $rowNumber = $rowIndex + 1; // Baris data manusiawi (1-based)
 
             foreach ($activeRules as $rule) {
-                // Ambil nilai sel berdasarkan column_index atau key nama kolom
-                $cellValue = $this->extractCellValue($row, $rule);
+                $sourceColumnIndex = $usesProfileMapping
+                    ? $this->columnMapper->resolveRuleColumnIndex($profile->slug, $rule->column_name, $headers)
+                    : $rule->column_index;
+                $cellValue = $sourceColumnIndex === null
+                    ? null
+                    : $this->extractCellValue($row, $rule, $sourceColumnIndex);
+                $anomalyColumnIndex = $sourceColumnIndex ?? ($usesProfileMapping ? -1 : $rule->column_index);
                 $trimmedValue = is_string($cellValue) ? trim($cellValue) : $cellValue;
                 $isEmpty = ($trimmedValue === null || $trimmedValue === '');
 
@@ -43,6 +52,7 @@ class ValidationEngine
                             $rowIndex,
                             $rowNumber,
                             $rule,
+                            $anomalyColumnIndex,
                             $cellValue,
                             $rule->error_message ?: "Kolom '{$rule->column_name}' wajib diisi (tidak boleh kosong)."
                         );
@@ -60,8 +70,8 @@ class ValidationEngine
 
                     if ($normalizedNip !== null) {
                         $valueToValidate = $normalizedNip;
-                        $rowKey = array_key_exists($rule->column_index, $row)
-                            ? $rule->column_index
+                        $rowKey = $sourceColumnIndex !== null && array_key_exists($sourceColumnIndex, $row)
+                            ? $sourceColumnIndex
                             : $rule->column_name;
                         $normalizedNips[$rowIndex][$rowKey] = $normalizedNip;
                     }
@@ -82,6 +92,7 @@ class ValidationEngine
                         $rowIndex,
                         $rowNumber,
                         $rule,
+                        $anomalyColumnIndex,
                         $cellValue,
                         $errorMessage
                     );
@@ -107,10 +118,10 @@ class ValidationEngine
     /**
      * Mengambil nilai sel dari baris data.
      */
-    private function extractCellValue(array $row, ValidationRule $rule): mixed
+    private function extractCellValue(array $row, ValidationRule $rule, int $columnIndex): mixed
     {
-        if (array_key_exists($rule->column_index, $row)) {
-            return $row[$rule->column_index];
+        if (array_key_exists($columnIndex, $row)) {
+            return $row[$columnIndex];
         }
 
         if (array_key_exists($rule->column_name, $row)) {
@@ -244,6 +255,7 @@ class ValidationEngine
         int $rowIndex,
         int $rowNumber,
         ValidationRule $rule,
+        ?int $sourceColumnIndex,
         mixed $value,
         string $message
     ): void {
@@ -251,7 +263,7 @@ class ValidationEngine
             'row_index' => $rowIndex,
             'row_number' => $rowNumber,
             'column_name' => $rule->column_name,
-            'column_index' => $rule->column_index,
+            'column_index' => $sourceColumnIndex ?? $rule->column_index,
             'original_value' => $value,
             'error_message' => $message,
             'needs_confirmation' => $rule->needs_confirmation,

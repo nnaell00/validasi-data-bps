@@ -13,6 +13,7 @@ class EmployeeDataSummaryTest extends TestCase
         $this->travelTo(Carbon::parse('2026-01-01 12:00:00'));
 
         $summary = (new EmployeeDataSummary)->summarize(
+            'data-kepegawaian',
             ['Tgl.Lahir', 'Pendidikan (SK)', 'Jenis Kelamin', 'Gol.Akhir', 'MK'],
             [
                 [0 => '1986-04-25', 1 => 'S1 Statistika', 2 => ' l ', 3 => 'III/a', 4 => '10 Thn 3 Bln'],
@@ -46,12 +47,15 @@ class EmployeeDataSummaryTest extends TestCase
         $this->assertSame(2, $summary['tenure']['count']);
         $this->assertSame(8.0, $summary['tenure']['average_years']);
         $this->assertSame(2, $summary['tenure']['unreadable_count']);
+        $this->assertFalse($summary['retirement']['available']);
+        $this->assertFalse($summary['kgb']['available']);
         $this->assertFalse($summary['retirement']['calculated']);
     }
 
     public function test_it_reports_unavailable_columns_without_fabricating_zero_statistics(): void
     {
         $summary = (new EmployeeDataSummary)->summarize(
+            'data-kepegawaian',
             ['Nama'],
             [[0 => 'Pegawai Uji']],
             [],
@@ -63,8 +67,59 @@ class EmployeeDataSummaryTest extends TestCase
         $this->assertFalse($summary['education']['available']);
         $this->assertFalse($summary['age']['available']);
         $this->assertFalse($summary['tenure']['available']);
-        $this->assertFalse($summary['retirement']['source_column_available']);
+        $this->assertFalse($summary['retirement']['available']);
+        $this->assertFalse($summary['kgb']['available']);
         $this->assertNull($summary['age']['average']);
         $this->assertNull($summary['tenure']['average_years']);
+    }
+
+    public function test_it_reads_dummy_and_bps_header_aliases_from_their_actual_positions(): void
+    {
+        $rows = [
+            [0 => '1980-01-01', 1 => 'III/a', 2 => 'S1', 3 => '10 Thn 2 Bln', 4 => 'L', 5 => '2025-01-01', 6 => '2026-02-01'],
+        ];
+
+        $dummyHeaders = ['Tanggal Lahir', 'Golongan', 'Pendidikan', 'Masa Kerja', 'Jenis Kelamin', 'Pengingat Pensiun', 'Pengingat KGB'];
+        $bpsHeaders = ['Tgl.Lahir', 'Gol.Akhir', 'Pendidikan (SK)', 'MK', 'Jenis Kelamin', 'Pengingat Pensiun', 'Pengingat KGB'];
+
+        $dummySummary = (new EmployeeDataSummary)->summarize(
+            'data-kepegawaian',
+            $dummyHeaders,
+            $rows,
+            ['L', 'LK', 'Laki-laki', 'P', 'PR', 'Perempuan', 'Wanita'],
+        );
+        $bpsSummary = (new EmployeeDataSummary)->summarize(
+            'data-kepegawaian',
+            $bpsHeaders,
+            $rows,
+            ['L', 'LK', 'Laki-laki', 'P', 'PR', 'Perempuan', 'Wanita'],
+        );
+
+        $this->assertSame($dummySummary['gender'], $bpsSummary['gender']);
+        $this->assertSame($dummySummary['rank'], $bpsSummary['rank']);
+        $this->assertSame($dummySummary['education'], $bpsSummary['education']);
+        $this->assertSame($dummySummary['age'], $bpsSummary['age']);
+        $this->assertSame($dummySummary['tenure'], $bpsSummary['tenure']);
+        $this->assertSame(
+            [['label' => '2025-01-01', 'count' => 1]],
+            $bpsSummary['retirement']['categories'],
+        );
+        $this->assertSame(
+            [['label' => '2026-02-01', 'count' => 1]],
+            $bpsSummary['kgb']['categories'],
+        );
+    }
+
+    public function test_it_does_not_choose_between_duplicate_alias_columns(): void
+    {
+        $summary = (new EmployeeDataSummary)->summarize(
+            'data-kepegawaian',
+            ['Nama', 'Pendidikan', 'Pendidikan (SK)'],
+            [[0 => 'Pegawai Uji', 1 => 'D3', 2 => 'S1']],
+        );
+
+        $this->assertFalse($summary['education']['available']);
+        $this->assertTrue($summary['education']['ambiguous']);
+        $this->assertSame([], $summary['education']['categories']);
     }
 }

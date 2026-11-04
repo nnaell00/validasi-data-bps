@@ -265,6 +265,78 @@ class ValidationEngineTest extends TestCase
         $this->assertSame($values, array_column($result['anomalies'], 'original_value'));
     }
 
+    public function test_employee_rules_read_reordered_alias_columns_from_their_headers(): void
+    {
+        $profile = ValidationProfile::create([
+            'name' => 'Data Kepegawaian',
+            'slug' => 'data-kepegawaian',
+        ]);
+        ValidationRule::create([
+            'validation_profile_id' => $profile->id,
+            'column_name' => 'NIP',
+            'column_index' => 2,
+            'data_type' => 'string',
+            'is_required' => true,
+            'validation_type' => 'regex',
+            'parameters' => ['pattern' => '/^[0-9]{18}$/D'],
+            'error_message' => 'NIP harus terdiri tepat dari 18 digit angka.',
+            'is_active' => true,
+        ]);
+        ValidationRule::create([
+            'validation_profile_id' => $profile->id,
+            'column_name' => 'Jenis Kelamin',
+            'column_index' => 9,
+            'data_type' => 'enum',
+            'is_required' => true,
+            'validation_type' => 'in_list',
+            'parameters' => ['options' => ['L', 'P']],
+            'error_message' => 'Jenis kelamin tidak valid.',
+            'is_active' => true,
+        ]);
+
+        $result = (new ValidationEngine)->validate(
+            $profile,
+            [
+                [0 => 'X', 1 => 'Pegawai Sintetis', 2 => '12345'],
+                [0 => 'P', 1 => 'Pegawai Sintetis', 2 => '198801152011011002'],
+            ],
+            ['Gender', 'Nama', 'NIP'],
+        );
+
+        $this->assertSame(1, $result['valid_rows_count']);
+        $this->assertSame(1, $result['anomalous_rows_count']);
+        $this->assertSame(2, $result['anomalies_count']);
+        $this->assertSame([2, 0], array_column($result['anomalies'], 'column_index'));
+    }
+
+    public function test_missing_employee_header_does_not_read_an_unrelated_column_by_its_old_index(): void
+    {
+        $profile = ValidationProfile::create([
+            'name' => 'Data Kepegawaian',
+            'slug' => 'data-kepegawaian',
+        ]);
+        ValidationRule::create([
+            'validation_profile_id' => $profile->id,
+            'column_name' => 'Pendidikan (SK)',
+            'column_index' => 7,
+            'data_type' => 'string',
+            'is_required' => true,
+            'validation_type' => 'none',
+            'error_message' => 'Pendidikan wajib diisi.',
+            'is_active' => true,
+        ]);
+
+        $result = (new ValidationEngine)->validate(
+            $profile,
+            [[0 => 'Pegawai Sintetis', 1 => 'nilai kolom lain']],
+            ['Nama', 'Kolom Tambahan'],
+        );
+
+        $this->assertSame(1, $result['anomalies_count']);
+        $this->assertSame(null, $result['anomalies'][0]['original_value']);
+        $this->assertSame(-1, $result['anomalies'][0]['column_index']);
+    }
+
     private function createNipValidationProfile(): ValidationProfile
     {
         $profile = ValidationProfile::create([
