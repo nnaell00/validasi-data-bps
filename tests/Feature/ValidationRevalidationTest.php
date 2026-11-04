@@ -32,6 +32,21 @@ class ValidationRevalidationTest extends TestCase
         $this->assertSame(8, $batch->summary['anomalous_rows']);
         $this->assertSame(10, $batch->summary['total_anomalies']);
 
+        $initialResults = $this->get(route('validation.results', $batch));
+        $initialResults->assertOk();
+        $initialResults->assertSee('Ringkasan Informasi Data Kepegawaian');
+        $initialResults->assertViewHas('informationSummary', function (array $summary): bool {
+            return $summary['total_rows'] === 27
+                && $summary['gender']['male'] === 21
+                && $summary['gender']['female'] === 5
+                && $summary['gender']['unrecognized_categories'] === [['label' => 'Bukan-L-P', 'count' => 1]]
+                && collect($summary['rank']['categories'])->contains('label', 'V/A')
+                && $summary['education']['categories'] !== []
+                && $summary['age']['count'] === 26
+                && $summary['tenure']['count'] === 27
+                && $summary['retirement']['calculated'] === false;
+        });
+
         $this->put(route('validation.update-row', [$batch, $rows[7]]), [
             'data' => [2 => '198701012010011001'],
         ])->assertRedirect(route('validation.results', $batch));
@@ -58,6 +73,16 @@ class ValidationRevalidationTest extends TestCase
             'column_name' => 'Nama',
             'is_resolved' => false,
         ]);
+        $revalidatedResults = $this->get(route('validation.results', $batch));
+        $revalidatedResults->assertOk();
+        $revalidatedResults->assertViewHas('informationSummary', function (array $summary): bool {
+            return $summary['total_rows'] === 27
+                && $summary['gender']['male'] === 21
+                && ! collect($summary['rank']['categories'])->contains('label', 'V/A')
+                && collect($summary['rank']['categories'])->contains('label', 'III/a')
+                && $summary['age']['count'] === 26;
+        });
+
         $this->assertSame(21, $batch->rows()->where('has_anomalies', false)->count());
         $this->assertSame(6, $batch->rows()->where('has_anomalies', true)->count());
         $this->assertSame(8, $batch->anomalies()->where('is_resolved', false)->count());

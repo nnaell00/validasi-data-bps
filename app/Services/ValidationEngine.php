@@ -4,12 +4,11 @@ namespace App\Services;
 
 use App\Models\ValidationProfile;
 use App\Models\ValidationRule;
-use DateTimeImmutable;
-use DateTimeInterface;
-use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 class ValidationEngine
 {
+    public function __construct(private DateValueParser $dateParser = new DateValueParser) {}
+
     /**
      * Memvalidasi kumpulan baris data berdasarkan aturan dari ValidationProfile.
      *
@@ -232,69 +231,7 @@ class ValidationEngine
      */
     private function isValidDate(mixed $value, ValidationRule $rule): bool
     {
-        if ($value instanceof DateTimeInterface) {
-            return true;
-        }
-
-        if (! is_scalar($value)) {
-            return false;
-        }
-
-        $str = trim((string) $value);
-        if ($str === '') {
-            return false;
-        }
-
-        if (is_numeric($str)) {
-            $serial = (float) $str;
-
-            if ($serial > 1000 && $serial <= 2958465) {
-                try {
-                    ExcelDate::excelToDateTimeObject($serial);
-
-                    return true;
-                } catch (\Exception) {
-                    return false;
-                }
-            }
-        }
-
-        $configuredFormats = $rule->parameters['format'] ?? [];
-        $formats = is_string($configuredFormats)
-            ? explode('|', $configuredFormats)
-            : (is_array($configuredFormats) ? $configuredFormats : []);
-        $formats = array_unique(array_merge($formats, [
-            'Y-m-d',
-            'd/m/Y',
-            'd-m-Y',
-            'Y/m/d',
-            'Y-m-d H:i:s',
-            'd/m/Y H:i:s',
-            'm/d/Y',
-            'm-d-Y',
-            'm/d/y',
-            'n/j/Y',
-            'n/j/y',
-        ]));
-
-        foreach ($formats as $format) {
-            if (! is_string($format) || $format === '') {
-                continue;
-            }
-
-            $parsed = DateTimeImmutable::createFromFormat('!'.$format, $str);
-            $errors = DateTimeImmutable::getLastErrors();
-
-            if (
-                $parsed !== false
-                && ($errors === false || ($errors['warning_count'] === 0 && $errors['error_count'] === 0))
-                && $parsed->format($format) === $str
-            ) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->dateParser->parse($value, $rule->parameters['format'] ?? []) !== null;
     }
 
     /**

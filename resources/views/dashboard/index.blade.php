@@ -3,6 +3,150 @@
 @section('title', 'Dashboard')
 
 @section('content')
+@if($user->isAdmin())
+<div class="space-y-5">
+    <header class="space-y-1" aria-labelledby="admin-dashboard-heading">
+        <p class="text-xs font-semibold uppercase tracking-wider text-bps-blue">Administrator Sistem</p>
+        <h1 id="admin-dashboard-heading" class="text-2xl font-bold tracking-tight text-bps-navy sm:text-3xl">Dashboard Administrator</h1>
+        <p class="text-sm text-slate-600">Pantau aktivitas dan kelola konfigurasi sistem validasi data.</p>
+    </header>
+
+    <section class="grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="Statistik utama">
+        <a href="{{ route('users.index') }}" aria-label="Total Pengguna: {{ number_format($stats['total_users'], 0, ',', '.') }}. Buka halaman Pengguna." class="app-card group flex cursor-pointer items-center justify-between gap-4 p-4 shadow-xs transition duration-200 hover:-translate-y-0.5 hover:border-bps-blue/30 hover:shadow-md active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-bps-blue/20 sm:p-5">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Pengguna</p>
+                <p class="mt-1 text-3xl font-bold tabular-nums text-slate-900">{{ number_format($stats['total_users'], 0, ',', '.') }}</p>
+                <p class="mt-1 text-xs text-slate-500">{{ $stats['admin_users'] }} Admin · {{ $stats['petugas_users'] }} Petugas BPS</p>
+            </div>
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-bps-blue transition-colors group-hover:bg-blue-100" aria-hidden="true">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20m17 0v-1.5a4 4 0 0 0-3-3.87M14 3.2a4 4 0 0 1 0 7.6"/>
+                    <circle cx="9.5" cy="7.5" r="4" stroke-width="1.8"/>
+                </svg>
+            </span>
+        </a>
+
+        <a href="{{ route('batches.index') }}" aria-label="Total Sesi Validasi: {{ number_format($stats['total_batches'], 0, ',', '.') }}. Buka halaman Riwayat Validasi." class="app-card group flex cursor-pointer items-center justify-between gap-4 p-4 shadow-xs transition duration-200 hover:-translate-y-0.5 hover:border-bps-blue/30 hover:shadow-md active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-bps-blue/20 sm:p-5">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Sesi Validasi</p>
+                <p class="mt-1 text-3xl font-bold tabular-nums text-slate-900">{{ number_format($stats['total_batches'], 0, ',', '.') }}</p>
+                <p class="mt-1 text-xs text-slate-500">Seluruh sesi yang tersimpan</p>
+            </div>
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 transition-colors group-hover:bg-indigo-100" aria-hidden="true">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 5h8m-8 4h8m-8 4h5m-8 7h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/>
+                </svg>
+            </span>
+        </a>
+
+        <a href="{{ route('profiles.index') }}" aria-label="Total Profil Validasi: {{ number_format($stats['total_profiles'], 0, ',', '.') }}. Buka halaman Profil dan Aturan." class="app-card group flex cursor-pointer items-center justify-between gap-4 p-4 shadow-xs transition duration-200 hover:-translate-y-0.5 hover:border-bps-blue/30 hover:shadow-md active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-bps-blue/20 sm:p-5">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Profil Validasi</p>
+                <p class="mt-1 text-3xl font-bold tabular-nums text-slate-900">{{ number_format($stats['total_profiles'], 0, ',', '.') }}</p>
+                <p class="mt-1 text-xs text-slate-500">Profil yang terdaftar</p>
+            </div>
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 transition-colors group-hover:bg-emerald-100" aria-hidden="true">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 6h14M5 12h14M5 18h14m-9-12v.01m6 6v.01m-5 6v.01"/>
+                </svg>
+            </span>
+        </a>
+    </section>
+
+    <section class="app-card overflow-hidden" aria-labelledby="recent-validations-heading">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:px-5">
+            <div>
+                <h2 id="recent-validations-heading" class="text-base font-bold text-slate-900">Aktivitas Validasi Terbaru</h2>
+                <p class="mt-1 text-xs text-slate-500">Maksimal lima sesi dengan hasil validasi tersimpan.</p>
+            </div>
+            <a href="{{ route('batches.index') }}" class="inline-flex min-h-9 items-center gap-1 text-sm font-semibold text-bps-blue hover:text-bps-navy hover:underline">
+                Lihat Semua Riwayat <span aria-hidden="true">&rarr;</span>
+            </a>
+        </div>
+
+        <div class="hidden xl:block">
+            <table class="app-table w-full table-fixed text-left">
+                <colgroup>
+                    <col class="w-[22%]">
+                    <col class="w-[14%]">
+                    <col class="w-[17%]">
+                    <col class="w-[10%]">
+                    <col class="w-[10%]">
+                    <col class="w-[17%]">
+                    <col class="w-[10%]">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Nama file / sesi</th>
+                        <th>Pengguna</th>
+                        <th>Waktu validasi</th>
+                        <th>Baris</th>
+                        <th>Anomali</th>
+                        <th>Status</th>
+                        <th class="text-right">Detail</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($recentBatches as $batch)
+                        <tr>
+                            <td class="truncate font-semibold text-slate-900" title="{{ $batch->file_name }}">{{ $batch->file_name }}</td>
+                            <td class="truncate" title="{{ $batch->user?->name ?? 'Pengguna tidak tersedia' }}">{{ $batch->user?->name ?? 'Pengguna tidak tersedia' }}</td>
+                            <td class="whitespace-nowrap text-xs text-slate-500">{{ $batch->updated_at?->copy()->timezone(config('app.display_timezone'))->format('d/m/Y H:i') ?? '—' }}</td>
+                            <td class="font-mono tabular-nums">{{ number_format($batch->rows_count, 0, ',', '.') }}</td>
+                            <td class="font-mono font-semibold tabular-nums {{ $batch->anomalous_rows_count > 0 ? 'text-amber-700' : 'text-emerald-700' }}">
+                                {{ number_format($batch->anomalous_rows_count, 0, ',', '.') }}
+                            </td>
+                            <td>
+                                @if($batch->status === 'completed')
+                                    <span class="app-status-valid">Selesai</span>
+                                @else
+                                    <span class="app-status-warning">Ada anomali</span>
+                                @endif
+                            </td>
+                            <td class="text-right">
+                                <a href="{{ route('validation.results', $batch) }}" class="font-semibold text-bps-blue hover:underline" aria-label="Lihat detail sesi {{ $batch->file_name }}">Lihat Detail</a>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="px-5 py-8 text-center text-sm text-slate-600">Belum ada sesi validasi yang dijalankan.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <ul class="divide-y divide-slate-100 xl:hidden">
+            @forelse($recentBatches as $batch)
+                <li class="space-y-3 p-4 sm:px-5">
+                    <div class="flex min-w-0 items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="truncate text-sm font-semibold text-slate-900" title="{{ $batch->file_name }}">{{ $batch->file_name }}</p>
+                            <p class="mt-1 truncate text-xs text-slate-500">{{ $batch->user?->name ?? 'Pengguna tidak tersedia' }}</p>
+                        </div>
+                        @if($batch->status === 'completed')
+                            <span class="app-status-valid shrink-0">Selesai</span>
+                        @else
+                            <span class="app-status-warning shrink-0">Ada anomali</span>
+                        @endif
+                    </div>
+                    <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-xs text-slate-600">
+                        <span>{{ $batch->updated_at?->copy()->timezone(config('app.display_timezone'))->format('d/m/Y H:i') ?? '—' }}</span>
+                        <span><strong class="font-mono text-slate-800">{{ number_format($batch->rows_count, 0, ',', '.') }}</strong> baris diperiksa</span>
+                        <span><strong class="font-mono {{ $batch->anomalous_rows_count > 0 ? 'text-amber-700' : 'text-emerald-700' }}">{{ number_format($batch->anomalous_rows_count, 0, ',', '.') }}</strong> baris anomali</span>
+                        <a href="{{ route('validation.results', $batch) }}" class="font-semibold text-bps-blue hover:underline" aria-label="Lihat detail sesi {{ $batch->file_name }}">Lihat Detail</a>
+                    </div>
+                </li>
+            @empty
+                <li class="px-4 py-8 text-center">
+                    <p class="text-sm font-semibold text-slate-700">Belum ada sesi validasi yang dijalankan</p>
+                    <p class="mt-1 text-xs text-slate-500">Aktivitas akan tampil setelah hasil validasi tersimpan.</p>
+                </li>
+            @endforelse
+        </ul>
+    </section>
+</div>
+@else
 <div class="space-y-6">
     <!-- Banner Sambutan -->
     <div class="relative overflow-hidden rounded-2xl bg-bps-navy p-6 text-white sm:p-8">
@@ -250,4 +394,5 @@
         </div>
     </div>
 </div>
+@endif
 @endsection

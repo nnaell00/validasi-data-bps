@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERD - Sistem Validasi Data BPS</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0f0f1a;
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 24px;
+    color: #fff;
+  }
+  h1 {
+    font-size: 24px;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+    background: linear-gradient(90deg, #6c63ff, #3b82f6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 20px;
+  }
+  .toolbar {
+    margin-bottom: 16px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .toolbar button {
+    background: linear-gradient(135deg, #6c63ff, #3b82f6);
+    color: #fff;
+    border: none;
+    padding: 10px 28px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(108,99,255,0.3);
+  }
+  .toolbar button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(108,99,255,0.5);
+  }
+  .canvas-wrapper {
+    background: #fff;
+    border-radius: 16px;
+    padding: 8px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    overflow: auto;
+    max-width: 100%;
+  }
+  canvas {
+    display: block;
+    border-radius: 10px;
+  }
+  .info {
+    margin-top: 16px;
+    color: #666;
+    font-size: 13px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<h1>Entity Relationship Diagram</h1>
+<p class="subtitle">Sistem Validasi Data BPS Kabupaten Purwakarta — Chen Notation</p>
+<div class="toolbar">
+  <button onclick="downloadPNG()">⬇ Download PNG (High-Res)</button>
+  <button onclick="downloadJPG()">⬇ Download JPG</button>
+</div>
+<div class="canvas-wrapper">
+  <canvas id="erd" width="2600" height="1900"></canvas>
+</div>
+<p class="info">Buka file ini di browser → klik Download PNG untuk menyimpan gambar ERD.</p>
+
+<script>
+const C = document.getElementById('erd');
+const ctx = C.getContext('2d');
+
+// ═══ COLOR PALETTE (match reference image) ═══
+const COL = {
+  bg: '#ffffff',
+  entity: '#2d3047',
+  attr: '#2d3047',
+  diamond: '#2d3047',
+  text: '#ffffff',
+  line: '#3a3a5a',
+  card: '#e74c3c',
+  pkLine: '#ffd700',
+  titleBg: '#2d3047',
+};
+
+// ═══ DRAWING PRIMITIVES ═══
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+function entity(x, y, label) {
+  ctx.font = 'bold 17px Segoe UI, Arial, sans-serif';
+  const tw = ctx.measureText(label).width;
+  const w = Math.max(tw + 50, 180), h = 46;
+  const rx = x - w/2, ry = y - h/2;
+
+  ctx.shadowColor = 'rgba(0,0,0,0.25)';
+  ctx.shadowBlur = 10;
+  ctx.shadowOffsetY = 3;
+
+  ctx.fillStyle = COL.entity;
+  roundRect(rx, ry, w, h, 10);
+  ctx.fill();
+
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+
+  ctx.strokeStyle = '#444466';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.fillStyle = COL.text;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, x, y);
+  return {x, y, w, h};
+}
+
+function oval(cx, cy, label, isPK, isFK) {
+  ctx.font = '13px Segoe UI, Arial, sans-serif';
+  const tw = ctx.measureText(label).width;
+  const rx = Math.max(tw/2 + 18, 42);
+  const ry = 17;
+
+  ctx.fillStyle = COL.attr;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle = '#444466';
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+
+  ctx.fillStyle = COL.text;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, cx, cy);
+
+  if (isPK) {
+    const uw = ctx.measureText(label).width;
+    ctx.strokeStyle = COL.pkLine;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - uw/2, cy + 8);
+    ctx.lineTo(cx + uw/2, cy + 8);
+    ctx.stroke();
+  }
+  if (isFK) {
+    const uw = ctx.measureText(label).width;
+    ctx.strokeStyle = '#aaa';
+    ctx.lineWidth = 1.2;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.moveTo(cx - uw/2, cy + 8);
+    ctx.lineTo(cx + uw/2, cy + 8);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+function diamond(cx, cy, label) {
+  ctx.font = '12px Segoe UI, Arial, sans-serif';
+  const tw = ctx.measureText(label).width;
+  const dx = Math.max(tw/2 + 20, 50);
+  const dy = 24;
+
+  ctx.shadowColor = 'rgba(0,0,0,0.15)';
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetY = 2;
+
+  ctx.fillStyle = COL.diamond;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy-dy); ctx.lineTo(cx+dx, cy);
+  ctx.lineTo(cx, cy+dy); ctx.lineTo(cx-dx, cy);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+
+  ctx.strokeStyle = '#444466';
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+
+  ctx.fillStyle = COL.text;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, cx, cy);
+}
+
+function line(x1, y1, x2, y2) {
+  ctx.strokeStyle = COL.line;
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+}
+
+function card(x, y, text) {
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(x, y, 13, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = COL.card; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = COL.card;
+  ctx.font = 'bold 16px Segoe UI, Arial, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y);
+}
+
+function mid(a, b, r) {
+  return {x: a.x + (b.x - a.x)*r, y: a.y + (b.y - a.y)*r};
+}
+
+function attrs(ex, ey, list) {
+  for (const a of list) {
+    line(ex, ey, a.x, a.y);
+    oval(a.x, a.y, a.n, a.pk||false, a.fk||false);
+  }
+}
+
+// ═══ CLEAR BACKGROUND ═══
+ctx.fillStyle = COL.bg;
+ctx.fillRect(0, 0, C.width, C.height);
+
+// ═══ TITLE BAR ═══
+ctx.fillStyle = COL.titleBg;
+roundRect(60, 18, C.width - 120, 60, 12);
+ctx.fill();
+ctx.font = 'bold 26px Segoe UI, Arial, sans-serif';
+ctx.fillStyle = '#fff';
+ctx.textAlign = 'center';
+ctx.textBaseline = 'middle';
+ctx.fillText('ENTITY RELATIONSHIP DIAGRAM — SISTEM VALIDASI DATA BPS', C.width/2, 40);
+ctx.font = '14px Segoe UI, Arial, sans-serif';
+ctx.fillStyle = '#bbb';
+ctx.fillText('Database: db_validasi_bps  ·  Laravel + MySQL  ·  Chen Notation  ·  Tugas Akhir', C.width/2, 62);
+
+// ═══ ENTITY POSITIONS ═══
+const E = {
+  users:     {x: 1300, y: 230},
+  profiles:  {x: 380,  y: 520},
+  rules:     {x: 380,  y: 1080},
+  batches:   {x: 1300, y: 830},
+  rows:      {x: 2150, y: 830},
+  anomalies: {x: 2150, y: 1430},
+  audit:     {x: 750,  y: 1500},
+};
+
+// ═══ RELATIONSHIP LINES ═══
+const rels = [
+  {from: E.users, to: E.profiles,  dx: 720,  dy: 350,  label: 'Membuat'},
+  {from: E.users, to: E.batches,   dx: 1300, dy: 520,  label: 'Mengunggah'},
+  {from: E.profiles, to: E.rules,  dx: 380,  dy: 800,  label: 'Memiliki'},
+  {from: E.profiles, to: E.batches,dx: 800,  dy: 700,  label: 'Digunakan'},
+  {from: E.batches, to: E.rows,    dx: 1720, dy: 830,  label: 'Berisi'},
+  {from: E.batches, to: E.audit,   dx: 1020, dy: 1180, label: 'Dicatat'},
+  {from: E.rows, to: E.anomalies,  dx: 2150, dy: 1130, label: 'Memiliki'},
+  {from: E.users, to: E.audit,     dx: 850,  dy: 900,  label: 'Melakukan'},
+  {from: E.batches, to: E.anomalies, dx:1700, dy: 1150, label: 'Memuat'},
+  {from: E.rows, to: E.audit,      dx: 1450, dy: 1400, label: 'Merujuk'},
+];
+
+for (const r of rels) {
+  const d = {x: r.dx, y: r.dy};
+  line(r.from.x, r.from.y, d.x, d.y);
+  line(d.x, d.y, r.to.x, r.to.y);
+}
+
+for (const r of rels) {
+  diamond(r.dx, r.dy, r.label);
+}
+
+for (const r of rels) {
+  const d = {x: r.dx, y: r.dy};
+  let p1 = mid(r.from, d, 0.2);
+  let p2 = mid(d, r.to, 0.8);
+  const angle1 = Math.atan2(d.y - r.from.y, d.x - r.from.x);
+  const angle2 = Math.atan2(r.to.y - d.y, r.to.x - d.x);
+  card(p1.x + Math.cos(angle1 + Math.PI/2)*18, p1.y + Math.sin(angle1 + Math.PI/2)*18, '1');
+  card(p2.x + Math.cos(angle2 + Math.PI/2)*18, p2.y + Math.sin(angle2 + Math.PI/2)*18, 'N');
+}
+
+// ═══ DRAW ENTITIES ═══
+ctx.font = 'bold 17px Segoe UI, Arial, sans-serif';
+entity(E.users.x, E.users.y, 'Users');
+entity(E.profiles.x, E.profiles.y, 'Validation Profiles');
+entity(E.rules.x, E.rules.y, 'Validation Rules');
+entity(E.batches.x, E.batches.y, 'Validation Batches');
+entity(E.rows.x, E.rows.y, 'Batch Rows');
+entity(E.anomalies.x, E.anomalies.y, 'Row Anomalies');
+entity(E.audit.x, E.audit.y, 'Audit Logs');
+
+// ═══ DRAW ATTRIBUTES ═══
+
+// Users
+attrs(E.users.x, E.users.y, [
+  {x:1090, y:140, n:'id', pk:true},
+  {x:1180, y:135, n:'name'},
+  {x:1280, y:130, n:'email'},
+  {x:1400, y:130, n:'role'},
+  {x:1500, y:140, n:'nip'},
+  {x:1540, y:200, n:'phone'},
+  {x:1530, y:270, n:'is_active'},
+  {x:1100, y:290, n:'password'},
+]);
+
+// Validation Profiles
+attrs(E.profiles.x, E.profiles.y, [
+  {x:170, y:430, n:'id', pk:true},
+  {x:280, y:420, n:'name'},
+  {x:400, y:410, n:'slug'},
+  {x:520, y:420, n:'description'},
+  {x:580, y:490, n:'is_active'},
+  {x:570, y:560, n:'created_by', fk:true},
+  {x:190, y:560, n:'created_at'},
+  {x:180, y:490, n:'updated_at'},
+]);
+
+// Validation Rules
+attrs(E.rules.x, E.rules.y, [
+  {x:150, y:980, n:'id', pk:true},
+  {x:140, y:1040, n:'profile_id', fk:true},
+  {x:155, y:1100, n:'column_name'},
+  {x:175, y:1160, n:'column_index'},
+  {x:250, y:1210, n:'data_type'},
+  {x:380, y:1220, n:'is_required'},
+  {x:510, y:1210, n:'validation_type'},
+  {x:595, y:1150, n:'parameters'},
+  {x:615, y:1090, n:'error_message'},
+  {x:600, y:1020, n:'is_active'},
+  {x:560, y:960, n:'needs_confirmation'},
+  {x:210, y:950, n:'confirmation_note'},
+]);
+
+// Validation Batches
+attrs(E.batches.x, E.batches.y, [
+  {x:1100, y:740, n:'id', pk:true},
+  {x:1100, y:810, n:'user_id', fk:true},
+  {x:1100, y:880, n:'profile_id', fk:true},
+  {x:1200, y:940, n:'file_name'},
+  {x:1330, y:950, n:'file_path'},
+  {x:1450, y:935, n:'total_rows'},
+  {x:1510, y:870, n:'status'},
+  {x:1510, y:800, n:'headers'},
+  {x:1490, y:740, n:'summary'},
+]);
+
+// Batch Rows
+attrs(E.rows.x, E.rows.y, [
+  {x:1970, y:720, n:'id', pk:true},
+  {x:1960, y:790, n:'batch_id', fk:true},
+  {x:1975, y:870, n:'row_index'},
+  {x:2010, y:935, n:'row_number'},
+  {x:2320, y:720, n:'original_data'},
+  {x:2350, y:790, n:'current_data'},
+  {x:2350, y:870, n:'has_anomalies'},
+  {x:2320, y:935, n:'is_corrected'},
+]);
+
+// Row Anomalies
+attrs(E.anomalies.x, E.anomalies.y, [
+  {x:1940, y:1330, n:'id', pk:true},
+  {x:1930, y:1400, n:'batch_id', fk:true},
+  {x:1940, y:1470, n:'batch_row_id', fk:true},
+  {x:2010, y:1530, n:'column_name'},
+  {x:2140, y:1560, n:'column_index'},
+  {x:2280, y:1540, n:'invalid_value'},
+  {x:2370, y:1480, n:'error_message'},
+  {x:2380, y:1410, n:'needs_confirmation'},
+  {x:2370, y:1340, n:'is_resolved'},
+  {x:2300, y:1300, n:'corrected_value'},
+]);
+
+// Audit Logs
+attrs(E.audit.x, E.audit.y, [
+  {x:530, y:1410, n:'id', pk:true},
+  {x:520, y:1480, n:'batch_id', fk:true},
+  {x:540, y:1550, n:'batch_row_id', fk:true},
+  {x:630, y:1610, n:'user_id', fk:true},
+  {x:770, y:1630, n:'column_name'},
+  {x:910, y:1610, n:'old_value'},
+  {x:980, y:1550, n:'new_value'},
+  {x:985, y:1480, n:'action'},
+  {x:950, y:1410, n:'notes'},
+]);
+
+// ═══ LEGEND ═══
+const LX = 60, LY = 1720;
+ctx.fillStyle = '#f5f5fa';
+roundRect(LX, LY, 780, 150, 12);
+ctx.fill();
+ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1; ctx.stroke();
+
+ctx.font = 'bold 17px Segoe UI'; ctx.fillStyle = COL.entity; ctx.textAlign = 'left';
+ctx.fillText('LEGENDA / LEGEND', LX+20, LY+28);
+
+ctx.fillStyle = COL.entity;
+roundRect(LX+20, LY+48, 90, 30, 6); ctx.fill();
+ctx.fillStyle = '#fff'; ctx.font = '13px Segoe UI'; ctx.textAlign = 'center';
+ctx.fillText('Entitas', LX+65, LY+64);
+ctx.textAlign = 'left'; ctx.fillStyle = '#333'; ctx.font = '14px Segoe UI';
+ctx.fillText('= Tabel / Entitas', LX+120, LY+66);
+
+ctx.fillStyle = COL.attr;
+ctx.beginPath(); ctx.ellipse(LX+65, LY+106, 44, 15, 0, 0, Math.PI*2); ctx.fill();
+ctx.fillStyle = '#fff'; ctx.font = '12px Segoe UI'; ctx.textAlign = 'center';
+ctx.fillText('atribut', LX+65, LY+107);
+ctx.textAlign = 'left'; ctx.fillStyle = '#333'; ctx.font = '14px Segoe UI';
+ctx.fillText('= Kolom / Atribut', LX+120, LY+109);
+
+ctx.fillStyle = COL.pkLine; ctx.font = 'bold 14px Segoe UI';
+ctx.fillText('___', LX+310, LY+58);
+ctx.fillStyle = '#333'; ctx.font = '14px Segoe UI';
+ctx.fillText('= Primary Key (garis bawah kuning)', LX+350, LY+60);
+
+ctx.setLineDash([5, 3]);
+ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1.5;
+ctx.beginPath(); ctx.moveTo(LX+310, LY+92); ctx.lineTo(LX+345, LY+92); ctx.stroke();
+ctx.setLineDash([]);
+ctx.fillStyle = '#333'; ctx.font = '14px Segoe UI';
+ctx.fillText('= Foreign Key (garis putus-putus)', LX+350, LY+95);
+
+ctx.fillStyle = COL.diamond;
+ctx.beginPath();
+ctx.moveTo(LX+325, LY+112); ctx.lineTo(LX+365, LY+125);
+ctx.lineTo(LX+325, LY+138); ctx.lineTo(LX+285, LY+125);
+ctx.closePath(); ctx.fill();
+ctx.fillStyle = '#fff'; ctx.font = '11px Segoe UI'; ctx.textAlign = 'center';
+ctx.fillText('relasi', LX+325, LY+126);
+ctx.textAlign = 'left'; ctx.fillStyle = '#333'; ctx.font = '14px Segoe UI';
+ctx.fillText('= Hubungan / Relasi Antar Entitas', LX+375, LY+128);
+
+ctx.fillStyle = '#fff';
+ctx.beginPath(); ctx.arc(LX+590, LY+60, 14, 0, Math.PI*2); ctx.fill();
+ctx.strokeStyle = COL.card; ctx.lineWidth = 2; ctx.stroke();
+ctx.fillStyle = COL.card; ctx.font = 'bold 16px Segoe UI'; ctx.textAlign = 'center';
+ctx.fillText('1', LX+590, LY+61);
+
+ctx.fillStyle = '#fff';
+ctx.beginPath(); ctx.arc(LX+625, LY+60, 14, 0, Math.PI*2); ctx.fill();
+ctx.strokeStyle = COL.card; ctx.lineWidth = 2; ctx.stroke();
+ctx.fillStyle = COL.card;
+ctx.fillText('N', LX+625, LY+61);
+
+ctx.textAlign = 'left'; ctx.fillStyle = '#333'; ctx.font = '14px Segoe UI';
+ctx.fillText('= Kardinalitas', LX+650, LY+63);
+ctx.font = '13px Segoe UI'; ctx.fillStyle = '#666';
+ctx.fillText('1 = Satu  ·  N = Banyak (Many)', LX+590, LY+95);
+ctx.fillText('Semua relasi bersifat One-to-Many (1:N)', LX+590, LY+120);
+
+ctx.font = '13px Segoe UI'; ctx.fillStyle = '#aaa'; ctx.textAlign = 'right';
+ctx.fillText('Validasi Data BPS — Tugas Akhir', C.width - 40, C.height - 18);
+
+function downloadPNG() {
+  const a = document.createElement('a');
+  a.download = 'ERD_Validasi_Data_BPS.png';
+  a.href = C.toDataURL('image/png');
+  a.click();
+}
+function downloadJPG() {
+  const a = document.createElement('a');
+  a.download = 'ERD_Validasi_Data_BPS.jpg';
+  a.href = C.toDataURL('image/jpeg', 0.95);
+  a.click();
+}
+</script>
+</body>
+</html>

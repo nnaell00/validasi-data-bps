@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\BatchRow;
 use App\Models\RowAnomaly;
 use App\Models\ValidationBatch;
+use App\Services\EmployeeDataSummary;
 use App\Services\ValidationEngine;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -55,11 +56,14 @@ class ValidationExecutionController extends Controller
     /**
      * Menampilkan antarmuka hasil validasi data dan daftar anomali.
      */
-    public function results(Request $request, ValidationBatch $batch): View
-    {
+    public function results(
+        Request $request,
+        ValidationBatch $batch,
+        EmployeeDataSummary $employeeDataSummary
+    ): View {
         Gate::authorize('view', $batch);
 
-        $batch->load(['profile', 'user']);
+        $batch->load(['profile.rules', 'user']);
 
         $filter = $request->input('filter', 'all'); // all, anomalies_only, valid_only
         $search = $request->input('search');
@@ -67,9 +71,9 @@ class ValidationExecutionController extends Controller
         $rowsQuery = $batch->rows()->with('anomalies');
 
         if ($filter === 'anomalies_only') {
-            $rowsQuery->where('has_anomalies', true);
+            $rowsQuery->whereHas('anomalies');
         } elseif ($filter === 'valid_only') {
-            $rowsQuery->where('has_anomalies', false);
+            $rowsQuery->whereDoesntHave('anomalies');
         }
 
         if ($search) {
@@ -81,15 +85,40 @@ class ValidationExecutionController extends Controller
         $rows = $rowsQuery->paginate(15)->withQueryString();
 
         $stats = [
-            'total_rows' => $batch->total_rows,
-            'valid_rows' => $batch->rows()->where('has_anomalies', false)->count(),
-            'anomalous_rows' => $batch->rows()->where('has_anomalies', true)->count(),
+            'total_rows' => $batch->rows()->count(),
+            'valid_rows' => $batch->rows()->whereDoesntHave('anomalies')->count(),
+            'anomalous_rows' => $batch->rows()->whereHas('anomalies')->count(),
             'total_anomalies' => $batch->anomalies()->where('is_resolved', false)->count(),
             'resolved_anomalies' => $batch->anomalies()->where('is_resolved', true)->count(),
             'total_corrected' => $batch->rows()->where('is_corrected', true)->count(),
         ];
 
-        return view('validation.results', compact('batch', 'rows', 'filter', 'search', 'stats'));
+        $informationSummary = null;
+        if ($batch->profile?->slug === 'data-kepegawaian') {
+            $genderRule = $batch->profile->rules->firstWhere('column_name', 'Jenis Kelamin');
+            $genderOptions = $genderRule?->parameters['options'] ?? [];
+            $genderOptions = is_array($genderOptions) ? $genderOptions : [];
+            $currentRows = BatchRow::query()
+                ->where('validation_batch_id', $batch->id)
+                ->select(['id', 'current_data'])
+                ->lazyById(500)
+                ->map(static fn (BatchRow $row): array => $row->current_data ?? []);
+
+            $informationSummary = $employeeDataSummary->summarize(
+                $batch->headers ?? [],
+                $currentRows,
+                $genderOptions,
+            );
+        }
+
+        return view('validation.results', compact(
+            'batch',
+            'rows',
+            'filter',
+            'search',
+            'stats',
+            'informationSummary',
+        ));
     }
 
     /**

@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\ValidationProfile;
+use App\Models\ValidationRule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -98,6 +100,78 @@ class AuthAndRoleTest extends TestCase
 
         $profilesResponse = $this->actingAs($petugas)->get('/profiles');
         $profilesResponse->assertForbidden();
+    }
+
+    public function test_admin_can_create_user_with_explicitly_disabled_status(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin Test',
+            'email' => 'admin-create@bps.go.id',
+            'role' => 'admin',
+            'password' => Hash::make('password'),
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($admin)->post('/users', [
+            'name' => 'Petugas Nonaktif',
+            'email' => 'petugas-nonaktif@bps.go.id',
+            'role' => 'petugas',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'is_active' => false,
+        ]);
+
+        $response->assertRedirect(route('users.index'));
+        $this->assertDatabaseHas('users', [
+            'email' => 'petugas-nonaktif@bps.go.id',
+            'role' => 'petugas',
+            'is_active' => false,
+        ]);
+    }
+
+    public function test_rule_update_respects_explicit_false_boolean_flags(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin Test',
+            'email' => 'admin-rule@bps.go.id',
+            'role' => 'admin',
+            'password' => Hash::make('password'),
+            'is_active' => true,
+        ]);
+
+        $profile = ValidationProfile::create([
+            'name' => 'Profil Uji',
+            'slug' => 'profil-uji',
+            'is_active' => true,
+        ]);
+
+        $rule = ValidationRule::create([
+            'validation_profile_id' => $profile->id,
+            'column_name' => 'Nama',
+            'column_index' => 1,
+            'data_type' => 'string',
+            'is_required' => true,
+            'validation_type' => 'none',
+            'parameters' => [],
+            'error_message' => 'Wajib diisi',
+            'needs_confirmation' => true,
+            'confirmation_note' => 'Perlu verifikasi',
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($admin)->put(route('profiles.rules.update', [$profile, $rule]), [
+            'error_message' => 'Nama harus terisi dengan benar.',
+            'is_required' => false,
+            'needs_confirmation' => false,
+            'confirmation_note' => 'Tidak perlu verifikasi',
+        ]);
+
+        $response->assertRedirect(route('profiles.show', $profile));
+        $this->assertDatabaseHas('validation_rules', [
+            'id' => $rule->id,
+            'is_required' => false,
+            'needs_confirmation' => false,
+        ]);
     }
 
     public function test_inactive_user_cannot_login(): void

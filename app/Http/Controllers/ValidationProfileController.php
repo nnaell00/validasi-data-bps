@@ -103,8 +103,8 @@ class ValidationProfileController extends Controller
 
         $rule->update([
             'error_message' => $validated['error_message'],
-            'is_required' => $request->has('is_required'),
-            'needs_confirmation' => $request->has('needs_confirmation'),
+            'is_required' => $request->boolean('is_required'),
+            'needs_confirmation' => $request->boolean('needs_confirmation'),
             'confirmation_note' => $validated['confirmation_note'] ?? null,
             'parameters' => $params,
         ]);

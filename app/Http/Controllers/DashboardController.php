@@ -19,39 +19,58 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        if ($user->isPetugas()) {
-            $processedStatuses = ['validated', 'completed'];
-            $processedRows = BatchRow::query()
-                ->whereHas('batch', function (Builder $query) use ($user, $processedStatuses): void {
-                    $query->where('user_id', $user->id)
-                        ->whereIn('status', $processedStatuses);
-                });
+        if ($user->isAdmin()) {
+            $stats = [
+                'total_users' => User::query()->count(),
+                'admin_users' => User::query()->where('role', 'admin')->count(),
+                'petugas_users' => User::query()->where('role', 'petugas')->count(),
+                'total_batches' => ValidationBatch::query()->count(),
+                'total_profiles' => ValidationProfile::query()->count(),
+            ];
 
-            $stats = [
-                'processed_batches' => ValidationBatch::query()
-                    ->where('user_id', $user->id)
-                    ->whereIn('status', $processedStatuses)
-                    ->count(),
-                'valid_rows' => (clone $processedRows)
-                    ->where('has_anomalies', false)
-                    ->count(),
-                'anomalous_rows' => (clone $processedRows)
-                    ->where('has_anomalies', true)
-                    ->count(),
-                'follow_up_rows' => (clone $processedRows)
-                    ->where('has_anomalies', true)
-                    ->whereHas('unresolvedAnomalies')
-                    ->count(),
-            ];
-        } else {
-            $stats = [
-                'total_users' => User::count(),
-                'total_batches' => 0,
-                'total_records_checked' => 0,
-                'total_anomalies' => 0,
-                'total_corrected' => 0,
-            ];
+            $recentBatches = ValidationBatch::query()
+                ->whereIn('status', ['validated', 'completed'])
+                ->with(['user:id,name'])
+                ->withCount('rows')
+                ->withCount([
+                    'rows as anomalous_rows_count' => fn (Builder $query): Builder => $query
+                        ->whereHas('anomalies'),
+                ])
+                ->latest('updated_at')
+                ->latest('id')
+                ->limit(5)
+                ->get();
+
+            return view('dashboard.index', compact(
+                'user',
+                'stats',
+                'recentBatches',
+            ));
         }
+
+        $processedStatuses = ['validated', 'completed'];
+        $processedRows = BatchRow::query()
+            ->whereHas('batch', function (Builder $query) use ($user, $processedStatuses): void {
+                $query->where('user_id', $user->id)
+                    ->whereIn('status', $processedStatuses);
+            });
+
+        $stats = [
+            'processed_batches' => ValidationBatch::query()
+                ->where('user_id', $user->id)
+                ->whereIn('status', $processedStatuses)
+                ->count(),
+            'valid_rows' => (clone $processedRows)
+                ->whereDoesntHave('anomalies')
+                ->count(),
+            'anomalous_rows' => (clone $processedRows)
+                ->whereHas('anomalies')
+                ->count(),
+            'follow_up_rows' => (clone $processedRows)
+                ->whereHas('anomalies')
+                ->whereHas('unresolvedAnomalies')
+                ->count(),
+        ];
 
         $activeProfile = ValidationProfile::query()
             ->where('slug', 'data-kepegawaian')

@@ -69,7 +69,7 @@ class UserController extends Controller
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
-        $validated['is_active'] = $request->has('is_active');
+        $validated['is_active'] = $request->boolean('is_active');
 
         User::create($validated);
 
@@ -111,7 +111,7 @@ class UserController extends Controller
             unset($validated['password']);
         }
 
-        $validated['is_active'] = $request->has('is_active');
+        $validated['is_active'] = $request->boolean('is_active');
 
         // Cegah Admin menonaktifkan dirinya sendiri
         if ($user->id === Auth::id() && ! $validated['is_active']) {
