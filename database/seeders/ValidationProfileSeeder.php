@@ -209,12 +209,12 @@ class ValidationProfileSeeder extends Seeder
                 'column_name' => 'No. WA',
                 'column_index' => 19,
                 'data_type' => 'string',
-                'is_required' => false, // Aturan khusus: No. WA opsional! Nilai kosong bukan anomali.
+                'is_required' => true,
                 'validation_type' => 'phone',
                 'parameters' => ['pattern' => '/^(\+?62|08)\d{8,13}$/'],
-                'error_message' => 'Nomor WhatsApp jika diisi harus berformat nomor Indonesia yang valid (contoh: 08123456789 atau 628123456789).',
+                'error_message' => 'Nomor WhatsApp wajib diisi dan harus berformat nomor Indonesia yang valid (contoh: 08123456789 atau 628123456789).',
                 'needs_confirmation' => false,
-                'confirmation_note' => 'Aturan khusus terpenuhi: Bersifat opsional, nilai kosong diizinkan.',
+                'confirmation_note' => null,
             ],
         ];
 

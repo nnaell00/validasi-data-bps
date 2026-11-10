@@ -65,35 +65,76 @@ class ValidationEngineTest extends TestCase
         $this->assertSame(1, $result['valid_rows_count']);
     }
 
-    public function test_empty_phone_number_is_not_an_anomaly(): void
+    public function test_operator_layanan_operasional_may_have_empty_rank_and_grade(): void
     {
-        $profile = ValidationProfile::create([
-            'name' => 'Test Kepegawaian',
-            'slug' => 'test-kepegawaian',
-        ]);
+        $profile = $this->createEmployeeRankAndGradeValidationProfile();
 
-        ValidationRule::create([
-            'validation_profile_id' => $profile->id,
-            'column_name' => 'No. WA',
-            'column_index' => 19,
-            'data_type' => 'string',
-            'is_required' => false, // No WA bersifat opsional!
-            'validation_type' => 'phone',
-            'error_message' => 'Format nomor WhatsApp tidak valid.',
-            'is_active' => true,
-        ]);
+        $result = (new ValidationEngine)->validate(
+            $profile,
+            [[0 => '  oPeRaToR   LaYaNaN OpErAsIoNaL  ', 1 => '', 2 => null]],
+            ['Stat.Jabatan', 'Pangkat', 'Gol.Akhir'],
+        );
 
-        $rows = [
-            [19 => ''], // Baris dengan No. WA kosong
-            [19 => null], // Baris dengan No. WA null
-            [19 => '081234567890'], // Baris dengan No. WA valid
-        ];
+        $this->assertSame(0, $result['anomalies_count']);
+        $this->assertSame(1, $result['valid_rows_count']);
+    }
 
-        $engine = new ValidationEngine;
-        $result = $engine->validate($profile, $rows);
+    public function test_other_employee_positions_still_require_rank_and_grade(): void
+    {
+        $profile = $this->createEmployeeRankAndGradeValidationProfile();
 
-        $this->assertEquals(0, $result['anomalies_count'], 'Nilai kosong pada No. WA tidak boleh dianggap sebagai anomali.');
-        $this->assertEquals(3, $result['valid_rows_count']);
+        $result = (new ValidationEngine)->validate(
+            $profile,
+            [[0 => 'Fungsional Statistisi', 1 => '', 2 => '']],
+            ['Stat.Jabatan', 'Pangkat', 'Gol.Akhir'],
+        );
+
+        $this->assertSame(2, $result['anomalies_count']);
+        $this->assertSame(['Pangkat', 'Gol.Akhir'], array_column($result['anomalies'], 'column_name'));
+    }
+
+    public function test_empty_whatsapp_values_are_anomalies_through_a_header_alias(): void
+    {
+        $profile = $this->createWhatsAppValidationProfile();
+
+        $result = (new ValidationEngine)->validate(
+            $profile,
+            [[0 => ''], [0 => '   '], [0 => null]],
+            ['No WA'],
+        );
+
+        $this->assertSame(3, $result['anomalies_count']);
+        $this->assertSame(['', '   ', null], array_column($result['anomalies'], 'original_value'));
+        $this->assertSame([0, 0, 0], array_column($result['anomalies'], 'column_index'));
+    }
+
+    public function test_whatsapp_remains_required_when_rule_metadata_is_stale(): void
+    {
+        $profile = $this->createWhatsAppValidationProfile();
+        $profile->rules()->firstOrFail()->update(['is_required' => false]);
+
+        $result = (new ValidationEngine)->validate(
+            $profile,
+            [[19 => null]],
+        );
+
+        $this->assertSame(1, $result['anomalies_count']);
+        $this->assertSame('No. WA', $result['anomalies'][0]['column_name']);
+    }
+
+    public function test_nonempty_whatsapp_values_still_follow_the_phone_format_rule(): void
+    {
+        $profile = $this->createWhatsAppValidationProfile();
+
+        $result = (new ValidationEngine)->validate(
+            $profile,
+            [[0 => '081234567890'], [0 => '12345']],
+            ['Nomor WhatsApp'],
+        );
+
+        $this->assertSame(1, $result['anomalies_count']);
+        $this->assertSame('12345', $result['anomalies'][0]['original_value']);
+        $this->assertSame(0, $result['anomalies'][0]['column_index']);
     }
 
     public function test_invalid_nip_and_required_name_detected_as_anomalies(): void
@@ -398,6 +439,56 @@ class ValidationEngineTest extends TestCase
             'validation_type' => 'date_format',
             'parameters' => ['format' => 'Y-m-d|d/m/Y|Y/m/d'],
             'error_message' => 'Tanggal harus berupa tanggal yang valid.',
+            'is_active' => true,
+        ]);
+
+        return $profile;
+    }
+
+    private function createEmployeeRankAndGradeValidationProfile(): ValidationProfile
+    {
+        $profile = ValidationProfile::create([
+            'name' => 'Data Kepegawaian',
+            'slug' => 'data-kepegawaian',
+        ]);
+
+        foreach ([
+            ['Stat.Jabatan', 0, 'none', null],
+            ['Pangkat', 1, 'none', null],
+            ['Gol.Akhir', 2, 'regex', ['pattern' => '/^(I|II|III|IV)\/[a-e]$/i']],
+        ] as [$columnName, $columnIndex, $validationType, $parameters]) {
+            ValidationRule::create([
+                'validation_profile_id' => $profile->id,
+                'column_name' => $columnName,
+                'column_index' => $columnIndex,
+                'data_type' => 'string',
+                'is_required' => true,
+                'validation_type' => $validationType,
+                'parameters' => $parameters,
+                'error_message' => "{$columnName} wajib diisi.",
+                'is_active' => true,
+            ]);
+        }
+
+        return $profile;
+    }
+
+    private function createWhatsAppValidationProfile(): ValidationProfile
+    {
+        $profile = ValidationProfile::create([
+            'name' => 'Data Kepegawaian',
+            'slug' => 'data-kepegawaian',
+        ]);
+
+        ValidationRule::create([
+            'validation_profile_id' => $profile->id,
+            'column_name' => 'No. WA',
+            'column_index' => 19,
+            'data_type' => 'string',
+            'is_required' => true,
+            'validation_type' => 'phone',
+            'parameters' => ['pattern' => '/^(\+?62|08)\d{8,13}$/'],
+            'error_message' => 'Nomor WhatsApp wajib diisi dan harus berformat nomor Indonesia yang valid.',
             'is_active' => true,
         ]);
 

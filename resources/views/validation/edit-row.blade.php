@@ -64,8 +64,8 @@
                                 <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
                                     Anomali
                                 </span>
-                            @elseif($headerName === 'No. WA')
-                                <span class="text-[10px] text-emerald-600 font-medium">Opsional</span>
+                            @elseif($batch->profile?->slug === 'data-kepegawaian' && $headerName === 'No. WA')
+                                <span class="text-[10px] text-rose-600 font-medium">Wajib</span>
                             @endif
                         </div>
 

@@ -174,6 +174,48 @@ class AuthAndRoleTest extends TestCase
         ]);
     }
 
+    public function test_whatsapp_rule_stays_required_when_updated_by_an_admin(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin WhatsApp',
+            'email' => 'admin-whatsapp@bps.go.id',
+            'role' => 'admin',
+            'password' => Hash::make('password'),
+            'is_active' => true,
+        ]);
+        $profile = ValidationProfile::create([
+            'name' => 'Data Kepegawaian',
+            'slug' => 'data-kepegawaian',
+            'is_active' => true,
+        ]);
+        $rule = ValidationRule::create([
+            'validation_profile_id' => $profile->id,
+            'column_name' => 'No. WA',
+            'column_index' => 19,
+            'data_type' => 'string',
+            'is_required' => true,
+            'validation_type' => 'phone',
+            'parameters' => ['pattern' => '/^(\+?62|08)\d{8,13}$/'],
+            'error_message' => 'Nomor WhatsApp wajib diisi.',
+            'is_active' => true,
+        ]);
+
+        $editResponse = $this->actingAs($admin)->get(route('profiles.rules.edit', [$profile, $rule]));
+        $editResponse->assertOk();
+        $editResponse->assertSee('tidak dapat diubah menjadi opsional');
+        $editResponse->assertSee('disabled', false);
+
+        $this->put(route('profiles.rules.update', [$profile, $rule]), [
+            'error_message' => 'Nomor WhatsApp wajib diisi.',
+            'is_required' => false,
+        ])->assertRedirect(route('profiles.show', $profile));
+
+        $this->assertDatabaseHas('validation_rules', [
+            'id' => $rule->id,
+            'is_required' => true,
+        ]);
+    }
+
     public function test_inactive_user_cannot_login(): void
     {
         User::create([

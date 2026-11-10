@@ -103,7 +103,9 @@ class ValidationProfileController extends Controller
 
         $rule->update([
             'error_message' => $validated['error_message'],
-            'is_required' => $request->boolean('is_required'),
+            'is_required' => $profile->slug === 'data-kepegawaian' && $rule->column_name === 'No. WA'
+                ? true
+                : $request->boolean('is_required'),
             'needs_confirmation' => $request->boolean('needs_confirmation'),
             'confirmation_note' => $validated['confirmation_note'] ?? null,
             'parameters' => $params,

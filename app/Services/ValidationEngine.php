@@ -23,6 +23,16 @@ class ValidationEngine
     {
         $activeRules = $profile->activeRules;
         $usesProfileMapping = $headers !== [] && $profile->slug === 'data-kepegawaian';
+        $statusJabatanRule = $profile->slug === 'data-kepegawaian'
+            ? $activeRules->first(fn (ValidationRule $rule): bool => in_array(
+                $this->normalizeColumnName($rule->column_name),
+                ['statjabatan', 'statusjabatan'],
+                true
+            ))
+            : null;
+        $statusJabatanColumnIndex = $usesProfileMapping
+            ? $this->columnMapper->resolveRuleColumnIndex($profile->slug, 'Stat.Jabatan', $headers)
+            : $statusJabatanRule?->column_index;
         $anomalies = [];
         $anomaliesByRow = [];
         $rowsWithAnomalies = [];
@@ -30,6 +40,13 @@ class ValidationEngine
 
         foreach ($rows as $rowIndex => $row) {
             $rowNumber = $rowIndex + 1; // Baris data manusiawi (1-based)
+            $statusJabatan = $statusJabatanColumnIndex === null
+                ? null
+                : ($statusJabatanRule === null
+                    ? ($row[$statusJabatanColumnIndex] ?? null)
+                    : $this->extractCellValue($row, $statusJabatanRule, $statusJabatanColumnIndex));
+            $isOperatorLayananOperasional = $profile->slug === 'data-kepegawaian'
+                && $this->isOperatorLayananOperasional($statusJabatan);
 
             foreach ($activeRules as $rule) {
                 $sourceColumnIndex = $usesProfileMapping
@@ -44,7 +61,12 @@ class ValidationEngine
 
                 // 1. Cek Kolom Wajib (is_required)
                 if ($isEmpty) {
-                    if ($rule->is_required) {
+                    $isEmptyRankOrGradeForOperator = $isOperatorLayananOperasional
+                        && in_array($this->normalizeColumnName($rule->column_name), ['pangkat', 'golakhir'], true);
+                    $isRequiredWhatsapp = $profile->slug === 'data-kepegawaian'
+                        && $this->normalizeColumnName($rule->column_name) === 'nowa';
+
+                    if (($rule->is_required || $isRequiredWhatsapp) && ! $isEmptyRankOrGradeForOperator) {
                         $this->recordAnomaly(
                             $anomalies,
                             $anomaliesByRow,
@@ -58,7 +80,7 @@ class ValidationEngine
                         );
                     }
 
-                    // Jika tidak wajib (seperti No. WA), nilai kosong aman dan dilewati
+                    // Nilai kosong yang tidak diwajibkan dilewati.
                     continue;
                 }
 
@@ -113,6 +135,24 @@ class ValidationEngine
             'anomalies_by_row' => $anomaliesByRow,
             'normalized_nips' => $normalizedNips,
         ];
+    }
+
+    private function isOperatorLayananOperasional(mixed $value): bool
+    {
+        if (! is_string($value)) {
+            return false;
+        }
+
+        $normalizedValue = preg_replace('/\s+/u', ' ', trim($value)) ?? trim($value);
+
+        return mb_strtoupper($normalizedValue) === 'OPERATOR LAYANAN OPERASIONAL';
+    }
+
+    private function normalizeColumnName(string $columnName): string
+    {
+        $normalizedName = preg_replace('/[^\p{L}\p{N}]+/u', '', trim($columnName));
+
+        return mb_strtolower($normalizedName ?? trim($columnName));
     }
 
     /**

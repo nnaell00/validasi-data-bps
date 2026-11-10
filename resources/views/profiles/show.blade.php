@@ -34,7 +34,7 @@
                 Aturan Khusus Kepegawaian BPS
             </div>
             <ul class="list-disc list-inside space-y-1 text-amber-800">
-                <li><strong>No. WhatsApp</strong> bersifat opsional. Nilai kosong <u>tidak pernah</u> dianggap anomali.</li>
+                <li><strong>No. WhatsApp</strong> wajib diisi semua pegawai dan nomor kosong dianggap anomali; format nomor Indonesia tetap diperiksa.</li>
                 <li><strong>3 Kolom Sumber yang belum diketahui namanya</strong> diabaikan dari penalti/anomali dan wajib dipertahankan utuh pada file ekspor.</li>
                 <li>Data sumber asli <strong>tidak diubah otomatis</strong> ketika anomali ditemukan.</li>
             </ul>
@@ -83,9 +83,6 @@
                             </td>
                             <td class="px-4 py-3">
                                 <span class="font-bold text-slate-900">{{ $rule->column_name }}</span>
-                                @if($rule->column_name === 'No. WA')
-                                    <span class="block text-[10px] text-emerald-600 font-medium">Opsional (Aman jika kosong)</span>
-                                @endif
                             </td>
                             <td class="px-4 py-3 font-mono text-slate-600">
                                 <span class="px-2 py-0.5 bg-slate-100 rounded text-[11px]">{{ $rule->data_type }}</span>

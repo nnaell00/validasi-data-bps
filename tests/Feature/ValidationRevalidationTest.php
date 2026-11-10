@@ -18,6 +18,76 @@ class ValidationRevalidationTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_operator_rank_and_grade_exemptions_and_required_whatsapp_survive_revalidation(): void
+    {
+        $user = $this->createPetugas();
+        [$batch, $rows] = $this->createDummyBatch($user);
+        $currentData = $rows[0]->current_data;
+        $currentData[3] = '  oPeRaToR   LaYaNaN OpErAsIoNaL ';
+        $currentData[4] = '';
+        $currentData[5] = null;
+        $currentData[19] = '';
+        $rows[0]->update(['current_data' => $currentData]);
+
+        $editResponse = $this->actingAs($user)->get(route('validation.edit-row', [$batch, $rows[0]]));
+        $editResponse->assertOk();
+        $editResponse->assertSee('Wajib');
+        $editResponse->assertDontSee('Opsional');
+
+        $this->actingAs($user)
+            ->post(route('validation.execute', $batch))
+            ->assertRedirect(route('validation.results', $batch));
+
+        $this->assertDatabaseHas('row_anomalies', [
+            'validation_batch_id' => $batch->id,
+            'batch_row_id' => $rows[0]->id,
+            'column_name' => 'No. WA',
+            'invalid_value' => '',
+            'is_resolved' => false,
+        ]);
+        $this->assertDatabaseMissing('row_anomalies', [
+            'validation_batch_id' => $batch->id,
+            'batch_row_id' => $rows[0]->id,
+            'column_name' => 'Pangkat',
+        ]);
+        $this->assertDatabaseMissing('row_anomalies', [
+            'validation_batch_id' => $batch->id,
+            'batch_row_id' => $rows[0]->id,
+            'column_name' => 'Gol.Akhir',
+        ]);
+
+        $this->put(route('validation.update-row', [$batch, $rows[0]]), [
+            'data' => [19 => '081234567890'],
+        ])->assertRedirect(route('validation.results', $batch));
+
+        $this->post(route('validation.revalidate', $batch))
+            ->assertRedirect(route('validation.results', $batch));
+
+        $this->assertDatabaseMissing('row_anomalies', [
+            'validation_batch_id' => $batch->id,
+            'batch_row_id' => $rows[0]->id,
+            'column_name' => 'No. WA',
+        ]);
+        $this->assertFalse($rows[0]->refresh()->has_anomalies);
+        $this->assertSame('081234567890', $rows[0]->current_data[19]);
+
+        $this->put(route('validation.update-row', [$batch, $rows[0]]), [
+            'data' => [19 => '   '],
+        ])->assertRedirect(route('validation.results', $batch));
+
+        $this->post(route('validation.revalidate', $batch))
+            ->assertRedirect(route('validation.results', $batch));
+
+        $this->assertDatabaseHas('row_anomalies', [
+            'validation_batch_id' => $batch->id,
+            'batch_row_id' => $rows[0]->id,
+            'column_name' => 'No. WA',
+            'invalid_value' => 'null',
+            'is_resolved' => false,
+        ]);
+        $this->assertTrue($rows[0]->refresh()->has_anomalies);
+    }
+
     public function test_revalidation_rechecks_all_27_rows_and_keeps_unfixed_anomalies(): void
     {
         $user = $this->createPetugas();
@@ -28,9 +98,9 @@ class ValidationRevalidationTest extends TestCase
             ->assertRedirect(route('validation.results', $batch));
 
         $this->assertSame('validated', $batch->refresh()->status);
-        $this->assertSame(19, $batch->summary['valid_rows']);
-        $this->assertSame(8, $batch->summary['anomalous_rows']);
-        $this->assertSame(10, $batch->summary['total_anomalies']);
+        $this->assertSame(17, $batch->summary['valid_rows']);
+        $this->assertSame(10, $batch->summary['anomalous_rows']);
+        $this->assertSame(14, $batch->summary['total_anomalies']);
 
         $initialResults = $this->get(route('validation.results', $batch));
         $initialResults->assertOk();
@@ -61,12 +131,18 @@ class ValidationRevalidationTest extends TestCase
         $batch->refresh();
         $this->assertSame('validated', $batch->status);
         $this->assertSame(27, $batch->summary['total_rows']);
-        $this->assertSame(21, $batch->summary['valid_rows']);
-        $this->assertSame(6, $batch->summary['anomalous_rows']);
-        $this->assertSame(8, $batch->summary['total_anomalies']);
+        $this->assertSame(18, $batch->summary['valid_rows']);
+        $this->assertSame(9, $batch->summary['anomalous_rows']);
+        $this->assertSame(12, $batch->summary['total_anomalies']);
         $this->assertFalse($rows[7]->refresh()->has_anomalies);
-        $this->assertFalse($rows[8]->refresh()->has_anomalies);
+        $this->assertTrue($rows[8]->refresh()->has_anomalies);
         $this->assertTrue($rows[9]->refresh()->has_anomalies);
+        $this->assertDatabaseHas('row_anomalies', [
+            'validation_batch_id' => $batch->id,
+            'batch_row_id' => $rows[8]->id,
+            'column_name' => 'No. WA',
+            'is_resolved' => false,
+        ]);
         $this->assertDatabaseHas('row_anomalies', [
             'validation_batch_id' => $batch->id,
             'batch_row_id' => $rows[9]->id,
@@ -83,9 +159,9 @@ class ValidationRevalidationTest extends TestCase
                 && $summary['age']['count'] === 26;
         });
 
-        $this->assertSame(21, $batch->rows()->where('has_anomalies', false)->count());
-        $this->assertSame(6, $batch->rows()->where('has_anomalies', true)->count());
-        $this->assertSame(8, $batch->anomalies()->where('is_resolved', false)->count());
+        $this->assertSame(18, $batch->rows()->where('has_anomalies', false)->count());
+        $this->assertSame(9, $batch->rows()->where('has_anomalies', true)->count());
+        $this->assertSame(12, $batch->anomalies()->where('is_resolved', false)->count());
         $this->assertSame(
             0,
             $batch->rows()
@@ -105,18 +181,18 @@ class ValidationRevalidationTest extends TestCase
         $resultsResponse->assertOk();
         $resultsResponse->assertViewHas('stats', function (array $stats): bool {
             return $stats['total_rows'] === 27
-                && $stats['valid_rows'] === 21
-                && $stats['anomalous_rows'] === 6
-                && $stats['total_anomalies'] === 8;
+                && $stats['valid_rows'] === 18
+                && $stats['anomalous_rows'] === 9
+                && $stats['total_anomalies'] === 12;
         });
 
         $dashboardResponse = $this->get(route('dashboard'));
         $dashboardResponse->assertOk();
         $dashboardResponse->assertViewHas('stats', function (array $stats): bool {
             return $stats['processed_batches'] === 1
-                && $stats['valid_rows'] === 21
-                && $stats['anomalous_rows'] === 6
-                && $stats['follow_up_rows'] === 6;
+                && $stats['valid_rows'] === 18
+                && $stats['anomalous_rows'] === 9
+                && $stats['follow_up_rows'] === 9;
         });
 
         $historyResponse = $this->get(route('batches.index'));
@@ -142,9 +218,9 @@ class ValidationRevalidationTest extends TestCase
 
         $batch->refresh();
         $this->assertSame('validated', $batch->status);
-        $this->assertSame(19, $batch->summary['valid_rows']);
-        $this->assertSame(8, $batch->summary['anomalous_rows']);
-        $this->assertSame(10, $batch->summary['total_anomalies']);
+        $this->assertSame(17, $batch->summary['valid_rows']);
+        $this->assertSame(10, $batch->summary['anomalous_rows']);
+        $this->assertSame(14, $batch->summary['total_anomalies']);
         $this->assertTrue($rows[7]->refresh()->is_corrected);
         $this->assertTrue($rows[7]->has_anomalies);
         $this->assertDatabaseHas('row_anomalies', [
@@ -180,7 +256,7 @@ class ValidationRevalidationTest extends TestCase
         $this->assertSame('validated', $batch->refresh()->status);
         $this->assertSame($originalSummary, $batch->summary);
         $this->assertSame($originalAnomalyCount, $batch->anomalies()->count());
-        $this->assertSame(8, $batch->rows()->where('has_anomalies', true)->count());
+        $this->assertSame(10, $batch->rows()->where('has_anomalies', true)->count());
     }
 
     private function createPetugas(): User

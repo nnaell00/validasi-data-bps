@@ -200,8 +200,27 @@ class BatchUploadAndPreviewTest extends TestCase
         $this->post(route('validation.execute', $batch))
             ->assertRedirect(route('validation.results', $batch));
 
+        $uploadedRow = $batch->rows()->firstOrFail();
+        $this->assertTrue($uploadedRow->refresh()->has_anomalies);
+        $this->assertDatabaseHas('row_anomalies', [
+            'validation_batch_id' => $batch->id,
+            'batch_row_id' => $uploadedRow->id,
+            'column_name' => 'No. WA',
+            'column_index' => 20,
+            'invalid_value' => 'null',
+            'is_resolved' => false,
+        ]);
+        $this->assertSame(1, $batch->refresh()->summary['anomalous_rows']);
+        $this->assertSame(1, $batch->summary['total_anomalies']);
+        $this->assertSame(0, $batch->summary['valid_rows']);
+
         $results = $this->get(route('validation.results', $batch));
         $results->assertOk();
+        $results->assertViewHas('stats', function (array $stats): bool {
+            return $stats['valid_rows'] === 0
+                && $stats['anomalous_rows'] === 1
+                && $stats['total_anomalies'] === 1;
+        });
         $results->assertViewHas('informationSummary', function (array $summary): bool {
             return $summary['total_rows'] === 1
                 && $summary['gender']['male'] === 1

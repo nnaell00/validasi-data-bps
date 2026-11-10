@@ -57,14 +57,17 @@
                 </div>
             @endif
 
+            @php($isRequiredWhatsapp = $profile->slug === 'data-kepegawaian' && $rule->column_name === 'No. WA')
             <div class="pt-1">
                 <label class="flex items-center text-xs text-slate-700 cursor-pointer">
-                    <input type="checkbox" name="is_required" value="1" {{ old('is_required', $rule->is_required) ? 'checked' : '' }}
+                    <input type="checkbox" name="is_required" value="1" {{ $isRequiredWhatsapp || old('is_required', $rule->is_required) ? 'checked' : '' }}
+                        {{ $isRequiredWhatsapp ? 'disabled' : '' }}
                         class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500">
                     <span class="ml-2 font-medium">Kolom wajib diisi (tidak boleh kosong)</span>
                 </label>
-                @if($rule->column_name === 'No. WA')
-                    <p class="text-[11px] text-emerald-600 mt-0.5 ml-6">Aturan khusus: No. WA sebaiknya tidak dicentang agar nilai kosong tidak dianggap anomali.</p>
+                @if($isRequiredWhatsapp)
+                    <input type="hidden" name="is_required" value="1">
+                    <p class="text-[11px] text-slate-600 mt-0.5 ml-6">No. WA wajib diisi untuk semua pegawai dan tidak dapat diubah menjadi opsional.</p>
                 @endif
             </div>
 
